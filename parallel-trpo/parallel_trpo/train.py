@@ -44,7 +44,7 @@ def train_parallel(
     # We use multiprocess rather than multiprocessing because Keras sets a multiprocessing context
     if not os.environ.get("SET_PARALLEL_TRPO_START_METHOD"): # Use an env variable to prevent double-setting
         multiprocess.set_start_method('spawn')
-        os.environ['SET_PARALLEL_TRPO_START_METHOD'] = 1
+        os.environ['SET_PARALLEL_TRPO_START_METHOD'] = "1"
 
     run_indefinitely = (runtime <= 0)
 
