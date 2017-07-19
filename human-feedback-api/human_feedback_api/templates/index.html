@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+
+    <div class="jumbotron text-center" style="margin-top: 20px">
+        <a href="/" class="lang-logo">
+            <img src="{% static 'lang-logo.png' %}">
+        </a>
+        <h1>RL Teacher</h1>
+        <p>Live training of AI agents</p>
+    </div>
+
+    <div>
+        <hr>
+        <div class="row">
+            <div class="col-md-6">
+                <h3><span class="glyphicon glyphicon-info-sign"></span> How this works</h3>
+                <ul>
+                    <li>You will see a task description and two videos of agents attempting to perform that task
+                    </li>
+
+                    <li>Decide which robot is coming closest to performing that task well
+                    </li>
+
+                    <li>Press the appropriate button
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h3><span class="glyphicon glyphicon-link"></span> Active experiments</h3>
+                <ul>
+                    {% for experiment_name in experiment_names %}
+                        <li>
+                            <a href="/experiments/{{ experiment_name }}" > /experiments/{{ experiment_name }}</a>
+                        </li>
+                    {%  endfor %}
+                </ul>
+            </div>
+        </div> <!-- row -->
+    </div>
+{% endblock %}

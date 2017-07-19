@@ -1,0 +1,8 @@
+{% load staticfiles %}
+{% load custom_tags %}
+
+<div>
+    {% for comparison in comparisons %}
+        {% _comparison comparison experiment%}
+    {% endfor %}
+</div>

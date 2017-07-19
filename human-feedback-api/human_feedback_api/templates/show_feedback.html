@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+    <div class="container" style="display:none">
+        <div class="alert alert-info text-center" role="alert">
+            Do your best to respond honestly
+        </div>
+        <hr>
+    </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 text-center">
+                <h3>Left</h3>
+                {% if ".mp4" in feedback.media_url_1 %}
+                    <video width="400px" autoplay loop>
+                        <source src="{{ feedback.media_url_1  }}" type="video/mp4"/>
+                    </video>
+                {% else %}
+                    <img style="width:400px" src="{{ feedback.media_url_1 }}">
+                {% endif %}
+            </div>
+            <div class="col-md-6 text-center">
+                <h3>Right</h3>
+                {% if ".mp4" in feedback.media_url_2 %}
+                    <video width="400px" autoplay loop>
+                        <source src="{{ feedback.media_url_2  }}" type="video/mp4"/>
+                    </video>
+                {% else %}
+                    <img style="width:400px" src="{{ feedback.media_url_2 }}">
+                {% endif %}
+            </div>
+        </div> <!-- row -->
+        <div class="container center" style="padding:60px">
+            <table style="border-spacing:10px border-collapse:separate margin:auto">
+                <tr> <td> Response: </td> <td> {{feedback.response}}</td> </tr>
+                <tr> <td> Created at: </td> <td> {{feedback.created_at}}</td> </tr>
+                <tr> <td> Shown at: </td> <td> {{feedback.shown_to_tasker_at}}</td> </tr>
+                <tr> <td> Responded at: </td> <td> {{feedback.responded_at}}</td> </tr>
+                <tr> <td> Priority: </td> <td> {{feedback.priority}}</td> </tr>
+                <tr> <td> Note: </td> <td> {{feedback.note}} </td> </tr>
+                <tr> <td> </td> <td> </td> </tr>
+            </table>
+            <hr>
+        </div>
+    </div>
+{% endblock %}

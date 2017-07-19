@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load custom_tags %}
+
+
+{% block content %}
+    <style>
+
+        @-webkit-keyframes fadeIt {
+            0% {
+                background-color: #532F8C;
+            }
+            100% {
+                background-color: #FFFFFF;
+            }
+        }
+
+        .flash-fade {
+            background-image: none !important;
+            -webkit-animation: fadeIt 1s ease-out;
+        }
+
+    </style>
+    <script src="/static/jquery.form.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mousetrap/1.6.1/mousetrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
+    <script>
+        function bindForms() {
+            $('form').ajaxForm({
+                beforeSubmit: swapInQueuedComparison,
+                success: handleFormResponse
+            });
+        }
+
+        function swapInQueuedComparison() {
+            // Remove the old one
+            $('.comparison').first().remove();
+
+            // Swap in the new one
+            $('.comparison').first().show();
+            $('.comparison').first().find("video").each(function () {
+                this.play()
+            });
+            return true
+        }
+
+        function currentIDs() {
+            result = [];
+            $('.comparison').toArray().forEach(function (el) {
+                result.push(el.attributes["comparison_id"].value)
+            });
+            return result
+        }
+
+        function QueueComparisons(newComparisonHtml) {
+            // Append the new one
+            ids = currentIDs();
+            newEl = $.parseHTML(newComparisonHtml);
+            $(newEl).find(".comparison").toArray().forEach(function (el) {
+                id = el.attributes["comparison_id"].value;
+                if (!ids.includes(id)) {
+                    QueueNewComparison(el)
+                }
+            })
+        }
+
+        function QueueNewComparison(newEl) {
+            console.log("Appending new comparison from ajax response");
+
+            $(newEl).hide();
+            $(newEl).insertBefore('.last');
+            //$('.comparison-container').append(newEl);
+
+            // Bind the new forms so that they stay ajax
+            bindForms();
+
+            // Ensure that the first comparison is shown (in case we hit the queue too fast)
+            $('.comparison').first().show();
+        }
+
+        function handleFormResponse(responseText, statusText, xhr, $form) {
+            if (statusText != "success") {
+                alert("Failed to submit comparison");
+            } else {
+                QueueComparisons(responseText)
+            }
+        }
+
+        $(document).ready(function () {
+            bindForms();
+            $('.comparison').toArray().slice(1).forEach(function (el) {
+                $(el).hide()
+            });
+
+            $('.comparison').first().find("video").each(function () {
+                this.play()
+            });
+
+
+            function choose(choice) {
+                $('.comparison').first().find('.choice-' + choice).click();
+
+                // Flash the new button so that the person knows what they just selected
+                $('.comparison').first().find('.choice-' + choice).addClass('flash-fade')
+            }
+
+            // Set up keyboard shortcuts
+            _.each({
+                left: 'left',
+                right: 'right',
+                // up: 'tie',
+                down: 'abstain'
+            }, function (option, key) {
+                Mousetrap.bind(key, function () {
+                    choose(option);
+                    return false // Prevent default
+                });
+            })
+        });
+
+    </script>
+
+    <div class="container comparison-container">
+        {% for comparison in comparisons %}
+            {% _comparison comparison experiment %}
+        {% endfor %}
+        {% _comparison None experiment %}
+    </div>
+
+{% endblock %}

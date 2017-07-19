@@ -1,0 +1,1 @@
+web: gunicorn human_feedback_site.wsgi --log-file -

@@ -1,0 +1,100 @@
+{% if comparison == None %}
+    <div class="comparison last" comparison_id={{-1 }}>
+        <div class="container" style="margin-top: 60px">
+            <div class="alert alert-info text-center" role="alert">
+                No queries are currently available (refresh the page in a few seconds)
+            </div>
+            <hr>
+        </div>
+    </div>
+{% else %}
+    <div class="comparison" comparison_id={{ comparison.id }}>
+        <div class="row">
+            <div class="col-md-6 text-center">
+                <h3>Left</h3>
+                {% if ".mp4" in comparison.media_url_1 %}
+                    <video width="400px" loop>
+                        <source src="{{ comparison.media_url_1 }}" type="video/mp4"/>
+                    </video>
+                {% else %}
+                    <img style="width:400px" src="{{ comparison.media_url_1 }}">
+                {% endif %}
+
+                <form style="padding-top:30px"
+                      action="/experiments/{{ experiment.name }}/ajax_response" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="comparison_id" value="{{ comparison.id }}">
+                    <input type="hidden" name="response" value="{{ 'left' }}">
+                    <input class="btn btn-lg btn-default choice-left" type="submit"
+                           value="Left is better">
+                </form>
+
+            </div>
+            <div class="col-md-6 text-center">
+                <h3>Right</h3>
+                {% if ".mp4" in comparison.media_url_2 %}
+                    <video width="400px" loop>
+                        <source src="{{ comparison.media_url_2 }}" type="video/mp4"/>
+                    </video>
+                {% else %}
+                    <img style="width:400px" src="{{ comparison.media_url_2 }}">
+                {% endif %}
+
+                <form style="padding-top:30px"
+                      action="/experiments/{{ experiment.name }}/ajax_response" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="comparison_id" value="{{ comparison.id }}">
+                    <input type="hidden" name="response" value="{{ 'right' }}">
+                    <input class="btn btn-lg btn-default choice-right" type="submit"
+                           value="Right is better">
+                </form>
+
+            </div>
+        </div>
+        <div style="text-align:center; height: 0">
+            <div style="position:relative;top:-78px;width: 200px;left: 50%;margin-left: -100px;">
+{#                <form style="padding-top:30px"#}
+{#                      action="/experiments/{{ experiment.name }}/ajax_response" method="post">#}
+{#                    {% csrf_token %}#}
+{#                    <input type="hidden" name="comparison_id" value="{{ comparison.id }}">#}
+{#                    <input type="hidden" name="response" value="{{ 'tie' }}">#}
+{#                    <input class="btn btn-lg btn-default  choice-tie" type="submit" value="It's a tie">#}
+{#                </form>#}
+
+                <form style="padding-top:30px"
+                      action="/experiments/{{ experiment.name }}/ajax_response" method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="comparison_id" value="{{ comparison.id }}">
+                    <input type="hidden" name="response" value="{{ 'abstain' }}">
+                    <input class="btn btn-lg btn-default choice-abstain" type="submit" value="Can't tell">
+                </form>
+            </div>
+        </div>
+        <hr>
+        <div>
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th> current comparison id</th>
+                    <th> total_responses</th>
+                    <th> started_at</th>
+                    <th> time_elapsed</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>{{ comparison.id }}</td>
+                    <td>{{ experiment.num_responses }}</td>
+                    <td>{{ experiment.started_at }}</td>
+                    <td>{{ experiment.pretty_time_elapsed }}</td>
+                </tr>
+                </tbody>
+            </table>
+            <div style="text-align:center">
+                <h4>
+                    <small>(refresh to get accurate counts)</small>
+                </h4>
+            </div>
+        </div> <!-- comparison -->
+    </div>
+{% endif %}

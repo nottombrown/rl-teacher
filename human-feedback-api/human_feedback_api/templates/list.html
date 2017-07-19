@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+
+    <div class="row text-center">
+        <h1>Responses for {{ experiment_name }}</h1>
+    </div>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th> comparison_id</th>
+            <th> created_at</th>
+            <th> responded_at</th>
+            <th> priority</th>
+            <th> response</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for comparison in comparisons %}
+            <tr>
+                <td><a href="/comparisons/{{ comparison.id }}">{{ comparison.id }}</a></td>
+                <td>{{ comparison.created_at }}</td>
+                <td>{{ comparison.responded_at }}</td>
+                <td>{{ comparison.priority }}</td>
+                <td>{{ comparison.response }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+
+{% endblock %}
