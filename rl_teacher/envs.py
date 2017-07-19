@@ -83,27 +83,19 @@ def task_by_name(name):
         return reacher()
     elif name == "humanoid":
         return humanoid()
-    elif name in ["simple-humanoid", "humanoid-simple"]:
-        return humanoid(standup=False)
     elif name == "hopper":
         return hopper()
-    elif name in ["short-hopper", "hopper-short"]:
-        return hopper(short=True)
-    elif name in ["hopper-hard", "hard-hopper"]:
-        return hopper(hard=True)
-    elif name in ["walker", "walker2d"]:
+    elif name in ["walker"]:
         return walker()
     elif name == "swimmer":
         return swimmer()
     elif name == "ant":
         return ant()
-    elif name == "ant-easy":
-        return ant(standup=False)
     elif name in ["cheetah", "halfcheetah"]:
         return cheetah()
     elif name in ["pendulum"]:
         return pendulum()
-    elif name in ["double-pendulum", "pendulum-double", "inverteddoublependulum"]:
+    elif name in ["double-pendulum"]:
         return double_pendulum()
     else:
         raise ValueError(name)
@@ -136,8 +128,8 @@ def reacher():
     env = MjViewer(fps=10, env=env)
     return limit(t=50, env=env)
 
-def hopper(short=False, hard=False):
-    bonus = lambda a, data: (data.qpos[1, 0] - 1 if not hard else -1) + 1e-3 * np.square(a).sum()
+def hopper(short=False):
+    bonus = lambda a, data: (data.qpos[1, 0] - 1) + 1e-3 * np.square(a).sum()
     env = mujoco.HopperEnv()
     env = MjViewer(fps=40, env=env)
     env = NeverDone(bonus=bonus, env=env)
