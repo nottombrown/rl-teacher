@@ -78,7 +78,7 @@ class TimeLimitTransparent(TimeLimit, TransparentWrapper):
 def limit(env, t):
     return TimeLimitTransparent(env, max_episode_steps=t)
 
-def task_by_name(name):
+def task_by_name(name, original_name=None):
     if name == "reacher":
         return reacher()
     elif name == "humanoid":
@@ -106,12 +106,20 @@ def task_by_name(name):
     elif name in ["double-pendulum", "pendulum-double", "inverteddoublependulum"]:
         return double_pendulum()
     else:
-        raise ValueError(name)
+        try:
+            # If an original_name is provided, try to make an environment from that.
+            # See "make_with_torque_removed"
+            env = gym.make(original_name)
+            env = limit(t=2000, env=env)
+            return env
+        except Exception:
+            raise ValueError(name)
 
 def make_with_torque_removed(env_id):
+    original_name = env_id
     if '-v' in env_id:
         env_id = env_id[:env_id.index('-v')].lower()
-    return task_by_name(env_id)  # Use our task_by_name function to get the env
+    return task_by_name(env_id, original_name)  # Use our task_by_name function to get the env
 
 def get_timesteps_per_episode(env):
     if hasattr(env, "_max_episode_steps"):
