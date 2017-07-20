@@ -387,7 +387,7 @@ def main():
             print("No label limit given. We will request one label every few seconds")
             label_schedule = ConstantLabelSchedule(pretrain_labels=pretrain_labels)
 
-        print("Starting pretraining of predictor")
+        print("Starting random rollouts to generate pretraining segments. No learning will take place...")
         pretrain_segments = segments_from_rand_rollout(args.seed, env_id, env, n_segments=pretrain_labels * 5)
 
         # Pull in our pretraining segments
