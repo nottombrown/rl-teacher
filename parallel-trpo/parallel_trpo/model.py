@@ -16,11 +16,13 @@ class TRPO(object):
         self.cg_damping = cg_damping
 
         env = make_env(env_id)
-        observation_size = env.observation_space.shape[0]
-        hidden_size = 64
-        action_size = np.prod(env.action_space.shape)
+        continuous_actions = hasattr(env.action_space, "shape")
 
-        self.obs = tf.placeholder(tf.float32, [None, observation_size])
+        observation_size = list(env.observation_space.shape)
+        hidden_size = 64
+        action_size = np.prod(env.action_space.shape) if continuous_actions else env.action_space.n
+
+        self.obs = tf.placeholder(tf.float32, [None] + observation_size)
         self.action = tf.placeholder(tf.float32, [None, action_size])
         self.advantage = tf.placeholder(tf.float32, [None])
         self.old_avg_action_dist = tf.placeholder(tf.float32, [None, action_size])
@@ -70,7 +72,7 @@ class TRPO(object):
         self.fvp = utils.flatgrad(gvp, self.policy_vars)
 
         config = tf.ConfigProto(
-            device_count = {'GPU': 0}
+            device_count={'GPU': 0}
         )
         self.session = tf.Session(config=config)
         self.session.run(tf.global_variables_initializer())

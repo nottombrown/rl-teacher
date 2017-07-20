@@ -4,6 +4,12 @@ import tensorflow as tf
 import numpy as np
 import scipy.signal
 
+
+def softmax(x):
+    e_x = np.exp(x - np.max(x))
+    return e_x / e_x.sum()
+
+
 # KL divergence with itself, holding first argument fixed
 def gauss_selfKL_firstfixed(mu, logstd):
     mu1, logstd1 = map(tf.stop_gradient, [mu, logstd])
@@ -112,6 +118,10 @@ def conjugate_gradient(f_Ax, b, cg_iters=10, residual_tol=1e-10):
 
 def make_network(network_name, input_layer, hidden_size, action_size):
     with tf.variable_scope(network_name):
+        if len(input_layer.shape) > 2:
+            size = np.prod(input_layer.get_shape().as_list()[1:])
+            input_layer = tf.reshape(input_layer, [-1, size])
+
         h1, h1_vars = make_fully_connected("policy_h1", input_layer, hidden_size)
         h2, h2_vars = make_fully_connected("policy_h2", h1, hidden_size)
         h3, h3_vars = make_fully_connected("policy_h3", h2, action_size, final_op=None)

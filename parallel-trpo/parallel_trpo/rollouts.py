@@ -4,7 +4,7 @@ from time import sleep
 
 import numpy as np
 import tensorflow as tf
-from parallel_trpo.utils import filter_ob, make_network
+from parallel_trpo.utils import filter_ob, make_network, softmax
 
 class Actor(multiprocess.Process):
     def __init__(self, task_q, result_q, env_id, make_env, seed, max_timesteps_per_episode):
@@ -38,25 +38,30 @@ class Actor(multiprocess.Process):
             [self.avg_action_dist, self.logstd_action_dist], feed_dict={self.obs: obs})
         # samples the guassian distribution
         act = avg_action_dist + np.exp(logstd_action_dist) * np.random.randn(*logstd_action_dist.shape)
-        return act.ravel(), avg_action_dist, logstd_action_dist
+        act = act.ravel()
+        if not self.continuous_actions:
+            act = softmax(act)
+        return act, avg_action_dist, logstd_action_dist
 
     def run(self):
         self.env = self.make_env(self.env_id)
         self.env.seed = self.seed
 
+        self.continuous_actions = hasattr(self.env.action_space, "shape")
+
         # tensorflow variables (same as in model.py)
-        observation_size = self.env.observation_space.shape[0]
+        observation_size = list(self.env.observation_space.shape)
         hidden_size = 64
-        action_size = np.prod(self.env.action_space.shape)
+        self.action_size = np.prod(self.env.action_space.shape) if self.continuous_actions else self.env.action_space.n
 
         # tensorflow model of the policy
-        self.obs = tf.placeholder(tf.float32, [None, observation_size])
+        self.obs = tf.placeholder(tf.float32, [None] + observation_size)
 
         self.policy_vars, self.avg_action_dist, self.logstd_action_dist = make_network(
-            "policy-a", self.obs, hidden_size, action_size)
+            "policy-a", self.obs, hidden_size, self.action_size)
 
         config = tf.ConfigProto(
-            device_count = {'GPU': 0}
+            device_count={'GPU': 0}
         )
         self.session = tf.Session(config=config)
         self.session.run(tf.global_variables_initializer())
@@ -92,7 +97,11 @@ class Actor(multiprocess.Process):
             avg_action_dists.append(avg_action_dist)
             logstd_action_dists.append(logstd_action_dist)
 
-            ob, rew, done, info = self.env.step(action)
+            if self.continuous_actions:
+                ob, rew, done, info = self.env.step(action)
+            else:
+                choice = np.random.choice(self.action_size, p=action)
+                ob, rew, done, info = self.env.step(choice)
             ob = filter_ob(ob)
 
             rewards.append(rew)
