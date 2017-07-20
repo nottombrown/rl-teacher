@@ -82,11 +82,11 @@ class Environment:
         self.previous_state = self.current_state = None
 
     def step(self, action):
-        observation, reward, done, _ = self.game.step(action)
+        observation, reward, done, info = self.game.step(action)
 
         self.total_reward += reward
         self._update_frame_q(observation)
 
         self.previous_state = self.current_state
         self.current_state = self._get_current_state()
-        return reward, done
+        return reward, done, info["human_obs"]

@@ -10,6 +10,7 @@ from gym import error
 def write_segment_to_video(segment, fname, env):
     os.makedirs(osp.dirname(fname), exist_ok=True)
     frames = [env.render_full_obs(x) for x in segment["human_obs"]]
+    # Draw out the last frame by 0.2s
     for i in range(int(env.fps * 0.2)):
         frames.append(frames[-1])
     export_video(frames, fname, fps=env.fps)

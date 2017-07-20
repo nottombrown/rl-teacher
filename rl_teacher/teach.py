@@ -10,6 +10,8 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from parallel_trpo.train import train_parallel
+from ga3c.Server import Server as Ga3cServer
+from ga3c.Config import Config as Ga3cConfig
 
 from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
@@ -348,7 +350,7 @@ def main():
     parser.add_argument('-l', '--n_labels', default=None, type=int)
     parser.add_argument('-L', '--pretrain_labels', default=None, type=int)
     parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
-    parser.add_argument('-a', '--agent', default="parallel_trpo", type=str)
+    parser.add_argument('-a', '--agent', default="ga3c", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     args = parser.parse_args()
 
@@ -379,9 +381,9 @@ def main():
         pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels // 4
 
         if args.n_labels:
-            label_schedule = LabelAnnealer(agent_logger, 
+            label_schedule = LabelAnnealer(agent_logger,
                 final_timesteps=num_timesteps,
-                final_labels=args.n_labels, 
+                final_labels=args.n_labels,
                 pretrain_labels=pretrain_labels)
         else:
             print("No label limit given. We will request one label every few seconds")
@@ -424,7 +426,11 @@ def main():
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
     print("Starting joint training of predictor and agent")
-    if args.agent == "parallel_trpo":
+    if args.agent == "ga3c":
+        Ga3cConfig.ATARI_GAME = env
+        Ga3cConfig.REWARD_MODIFIER = wrapped_predictor
+        Ga3cServer().main()
+    elif args.agent == "parallel_trpo":
         train_parallel(
             env_id=env_id,
             make_env=make_with_torque_removed,

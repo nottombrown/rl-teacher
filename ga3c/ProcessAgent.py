@@ -98,13 +98,38 @@ class ProcessAgent(Process):
 
             prediction, value = self.predict(self.env.current_state)
             action = self.select_action(prediction)
-            reward, done = self.env.step(action)
+            reward, done, human_obs = self.env.step(action)
             reward_sum += reward
-            exp = Experience(self.env.previous_state, action, prediction, reward, done)
+            exp = Experience(self.env.previous_state, action, prediction, reward, done, human_obs)
             experiences.append(exp)
 
             if done or time_count == Config.TIME_MAX:
                 terminal_reward = 0 if done else value
+
+                ################################
+                #  START REWARD MODIFICATIONS  #
+                ################################
+                if hasattr(Config, "REWARD_MODIFIER"):
+                    # Translate the experience list into a "path" that RL-Teacher expects
+                    path = {
+                        "obs": [e.state for e in experiences],
+                        "original_rewards": [e.reward for e in experiences],
+                        "action": [e.action for e in experiences],
+                        "human_obs": [e.human_obs for e in experiences],  # TODO: Figure out if this is sufficient for rendering!
+                    }
+
+                    # Note: This "prediction" is a different kind than is used in A3C.
+                    # This is prediction by RL-Teacher of the "true" reward known by a human.
+                    path["rewards"] = Config.REWARD_MODIFIER.predict_reward(path)
+                    if hasattr(Config.REWARD_MODIFIER, 'path_callback'):
+                        Config.REWARD_MODIFIER.path_callback(path, 1)  # TODO: Figure out how to put the iteration count in here!
+
+                    # Translate new rewards back into the experiences
+                    for i in range(len(experiences)):
+                        experiences[i].reward = path["rewards"][i]
+                ################################
+                #   END REWARD MODIFICATIONS   #
+                ################################
 
                 updated_exps = ProcessAgent._accumulate_rewards(experiences, self.discount_factor, terminal_reward)
                 x_, r_, a_ = self.convert_data(updated_exps)

@@ -45,6 +45,21 @@ class MjViewer(TransparentWrapper):
         info["human_obs"] = human_obs
         return ob, reward, done, info
 
+class PixelEnvViewer(TransparentWrapper):
+    """Saves the raw human_obs to info that allows rendering videos subsequently"""
+
+    def __init__(self, env, fps=40):
+        self.fps = fps
+        super().__init__(env)
+
+    def render_full_obs(self, full_obs):
+        return full_obs  # Don't need to do anything because we already have the source pixels!
+
+    def _step(self, a):
+        ob, reward, done, info = self.env._step(a)
+        info["human_obs"] = ob
+        return ob, reward, done, info
+
 class UseReward(TransparentWrapper):
     """Use a reward other than the normal one for an environment.
      We do this because humans cannot see torque penalties
@@ -110,6 +125,7 @@ def task_by_name(name, original_name=None):
             # If an original_name is provided, try to make an environment from that.
             # See "make_with_torque_removed"
             env = gym.make(original_name)
+            env = PixelEnvViewer(env, fps=30)
             env = limit(t=2000, env=env)
             return env
         except Exception:

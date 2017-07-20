@@ -28,12 +28,16 @@ import gym
 
 
 class GameManager:
-    def __init__(self, game_name, display):
-        self.game_name = game_name
+    def __init__(self, game, display):
         self.display = display
 
-        self.env = gym.make(game_name)
-        self.reset()
+        if type(game) is str:
+            self.game_name = game
+            self.env = gym.make(game)
+            self.reset()
+        else:
+            self.env = game
+            self.game_name = str(game)
 
     def reset(self):
         observation = self.env.reset()

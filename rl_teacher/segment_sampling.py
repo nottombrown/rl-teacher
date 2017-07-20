@@ -8,8 +8,8 @@ from rl_teacher.video import write_segment_to_video
 CLIP_LENGTH = 1.5
 
 def create_segment_q_states(segment):
-    obs_Ds = segment["obs"]
-    act_Ds = segment["action"]
+    obs_Ds = np.reshape(segment["obs"], (len(segment["obs"]), -1))  # Flatten observation space
+    act_Ds = np.reshape(segment["action"], (len(segment["action"]), -1))  # Flatten action space
     return np.concatenate([obs_Ds, act_Ds], axis=1)
 
 def sample_segment_from_path(path, segment_length):
