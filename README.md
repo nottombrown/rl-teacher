@@ -1,7 +1,5 @@
 # RL-Teacher
 
-## What is `rl-teacher`?
-
 `rl-teacher` is an implementation of *Deep Reinforcement Learning from Human Preferences* (https://arxiv.org/abs/1706.03741)
 
 The system allows you to train a reinforcement learning agent to do novel behaviors, even when:
