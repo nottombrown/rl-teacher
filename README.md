@@ -238,7 +238,7 @@ On the right are agents that were trained to do tricks based off human feedback;
 
 | Hopper Normal  | Hopper Backflip              |
 | -------------- | ---------------------------- |
-| ![hopper_normal](https://user-images.githubusercontent.com/306655/28431273-a6e19666-6d38-11e7-8c96-cab779147546.gif) | ![hopper_backflip_full](https://user-images.githubusercontent.com/306655/28431247-90ec7c40-6d38-11e7-9a4d-5033d2519605.gif) |
+| ![hopper_normal](https://user-images.githubusercontent.com/306655/28431273-a6e19666-6d38-11e7-8c96-cab779147546.gif) | ![hopper_backflip_full](https://user-images.githubusercontent.com/306655/28431444-420bb82e-6d39-11e7-84a5-6f9f93883031.gif) |
 
 
 
