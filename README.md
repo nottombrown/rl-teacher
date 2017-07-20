@@ -228,17 +228,18 @@ Test that video rendering works end to end
 # Agent Circus
 On the right are agents that were trained to do tricks based off human feedback; on the left, their counterparts trained with traditional RL.
 
+| Walker Normal  | Walker Ballerina               |
+| -------------- | ---------------------------- |
+| ![walker_normal](https://user-images.githubusercontent.com/306655/28396993-a45caa1e-6cb3-11e7-8f6c-c043ca76ff01.gif) | ![walker_ballerina](https://user-images.githubusercontent.com/306655/28396526-d4ce6334-6cb0-11e7-825c-63a85c8ff533.gif)|
+
 | Reacher Normal  | Reacher Fearful               |
 | -------------- | ---------------------------- |
 | ![reacher_normal](https://user-images.githubusercontent.com/306655/28396465-646c8800-6cb0-11e7-8f15-beab00d46f03.gif) | ![reacher_fear](https://user-images.githubusercontent.com/306655/28396509-a0e5ed76-6cb0-11e7-98d4-08b7cd905706.gif) |
 
 | Hopper Normal  | Hopper Backflip              |
 | -------------- | ---------------------------- |
-| ![hopper_normal_400px](https://user-images.githubusercontent.com/306655/28396875-0059e206-6cb3-11e7-807a-607fed054e85.gif) | ![hopper-backflip](https://user-images.githubusercontent.com/306655/28396079-e5366bca-6cad-11e7-934e-60f5f1ce972f.gif) |
+| ![hopper_normal](https://user-images.githubusercontent.com/306655/28431273-a6e19666-6d38-11e7-8c96-cab779147546.gif) | ![hopper_backflip_full](https://user-images.githubusercontent.com/306655/28431247-90ec7c40-6d38-11e7-9a4d-5033d2519605.gif) |
 
-| Walker Normal  | Walker Ballerina               |
-| -------------- | ---------------------------- |
-| ![walker_normal](https://user-images.githubusercontent.com/306655/28396993-a45caa1e-6cb3-11e7-8f6c-c043ca76ff01.gif) | ![walker_ballerina](https://user-images.githubusercontent.com/306655/28396526-d4ce6334-6cb0-11e7-825c-63a85c8ff533.gif)|
 
 
 # Acknowledgments
