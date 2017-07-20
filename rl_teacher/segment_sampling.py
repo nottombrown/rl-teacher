@@ -5,8 +5,6 @@ from parallel_trpo.rollouts import ParallelRollout
 from rl_teacher.envs import get_timesteps_per_episode, make_with_torque_removed
 from rl_teacher.video import write_segment_to_video
 
-CLIP_LENGTH = 1.5
-
 def create_segment_q_states(segment):
     obs_Ds = np.reshape(segment["obs"], (len(segment["obs"]), -1))  # Flatten observation space
     act_Ds = np.reshape(segment["action"], (len(segment["action"]), -1))  # Flatten action space
@@ -62,7 +60,8 @@ class RandomRolloutSegmentCollector(object):
         self.segments = []
 
     def path_callback(self, path, iteration):
-        segment = sample_segment_from_path(path, int(CLIP_LENGTH * self.fps))
+        clip_length_in_seconds = 1.5
+        segment = sample_segment_from_path(path, int(clip_length_in_seconds * self.fps))
         if segment:
             self.segments.append(segment)
 
