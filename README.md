@@ -242,3 +242,10 @@ On the right are agents that were trained to do tricks based off human feedback;
 | -------------- | ---------------------------- |
 | ![hopper_normal_400px](https://user-images.githubusercontent.com/306655/28396875-0059e206-6cb3-11e7-807a-607fed054e85.gif) | ![hopper-backflip](https://user-images.githubusercontent.com/306655/28396079-e5366bca-6cad-11e7-934e-60f5f1ce972f.gif) |
 
+
+# Acknowledgments
+A huge thanks to Paul Christiano and Dario Amodei for the design of this system and for encouragement to make an open source version.  
+
+Max Harms ([@raelifin](https://github.com/Raelifin)) wrote substantial portions of the system. Thank you for integrating and tuning the parellized TRPO implementation, and for adding many additional features and improvements.
+
+Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).
