@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from parallel_trpo.train import train_parallel
+from parallel_trpo.rollouts import ParallelRollout
 
 from rl_teacher.envs import get_timesteps_per_episode, make_with_torque_removed
 from rl_teacher.video import write_segment_to_video
@@ -79,19 +79,20 @@ class RandomRolloutSegmentCollector(object):
 class SuccessfullyCollectedSegments(Exception):
     pass
 
-def segments_from_rand_rollout(seed, env_id, env, n_segments):
+def segments_from_rand_rollout(seed, env_id, env, n_segments, workers=4):
     collector = RandomRolloutSegmentCollector(n_segments, fps=env.fps)
+    max_timesteps_per_episode = get_timesteps_per_episode(env)
+    timesteps_per_batch = 8000
     try:
-        with  tf.Graph().as_default():
-            train_parallel(
-                env_id=env_id,
-                make_env=make_with_torque_removed,
-                predictor=collector,
-                runtime=1e12,  # Arbitrarily large number
-                max_timesteps_per_episode=get_timesteps_per_episode(env),
-                timesteps_per_batch=8000,
-                max_kl=0.0,  # Don't do any updates
-            )
+        with tf.Graph().as_default():
+            rollouts = ParallelRollout(env_id, make_with_torque_removed, collector, workers, max_timesteps_per_episode, seed)
+            iteration = 0
+            while True:
+                iteration += 1
+                # run a bunch of async processes that collect rollouts
+                # Eventually this will cause an exception
+                rollouts.rollout(timesteps_per_batch, iteration)
+
     except SuccessfullyCollectedSegments:
         print("Successfully collected %s segments" % len(collector.segments))
         return collector.segments

@@ -55,7 +55,7 @@ class LabelAnnealer(object):
 
 class ConstantLabelSchedule(object):
     def __init__(self, pretrain_labels, seconds_between_labels=3.0):
-        self._started_at = None # Don't initialize until we call n_desired_labels
+        self._started_at = None  # Don't initialize until we call n_desired_labels
         self._seconds_between_labels = seconds_between_labels
         self._pretrain_labels = pretrain_labels
 
@@ -381,7 +381,8 @@ def main():
         pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels // 4
 
         if args.n_labels:
-            label_schedule = LabelAnnealer(agent_logger,
+            label_schedule = LabelAnnealer(
+                agent_logger,
                 final_timesteps=num_timesteps,
                 final_labels=args.n_labels,
                 pretrain_labels=pretrain_labels)
@@ -390,7 +391,8 @@ def main():
             label_schedule = ConstantLabelSchedule(pretrain_labels=pretrain_labels)
 
         print("Starting pretraining of predictor")
-        pretrain_segments = segments_from_rand_rollout(args.seed, env_id, env, n_segments=pretrain_labels * 5)
+        pretrain_segments = segments_from_rand_rollout(
+            args.seed, env_id, env, n_segments=pretrain_labels * 5, workers=args.workers)
 
         # Pull in our pretraining segments
         while len(comparison_collector) < int(pretrain_labels):  # Turn our segments into comparisons
@@ -420,7 +422,8 @@ def main():
                 print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
-    wrapped_predictor = SegmentVideoRecorder(predictor, env, checkpoint_interval=2,
+    wrapped_predictor = SegmentVideoRecorder(
+        predictor, env, checkpoint_interval=2,
         save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
