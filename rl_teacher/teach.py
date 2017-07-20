@@ -33,7 +33,7 @@ class TraditionalRLRewardPredictor():
         self.agent_logger = AgentLogger(summary_writer)
 
     def predict_reward(self, path):
-        self.agent_logger.log_episode(path)
+        # self.agent_logger.log_episode(path)  <-- This causes problems for GA3C
         return path["original_rewards"]
 
 class LabelAnnealer(object):
@@ -420,7 +420,7 @@ def main():
                 print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
-    wrapped_predictor = SegmentVideoRecorder(predictor, env, checkpoint_interval=20,
+    wrapped_predictor = SegmentVideoRecorder(predictor, env, checkpoint_interval=2,
         save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward

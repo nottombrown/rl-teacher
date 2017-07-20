@@ -82,10 +82,17 @@ class ProcessAgent(Process):
             action = np.random.choice(self.actions, p=prediction)
         return action
 
-    def run_episode(self):
+    def run_episode(self, iteration):
         self.env.reset()
         done = False
         experiences = []
+
+        path = {
+            "obs": [],
+            "original_rewards": [],
+            "action": [],
+            "human_obs": [],
+        }
 
         time_count = 0
         reward_sum = 0.0
@@ -110,23 +117,26 @@ class ProcessAgent(Process):
                 #  START REWARD MODIFICATIONS  #
                 ################################
                 if hasattr(Config, "REWARD_MODIFIER"):
-                    # Translate the experience list into a "path" that RL-Teacher expects
-                    path = {
-                        "obs": [e.state for e in experiences],
-                        "original_rewards": [e.reward for e in experiences],
-                        "action": [e.action for e in experiences],
-                        "human_obs": [e.human_obs for e in experiences],  # TODO: Figure out if this is sufficient for rendering!
-                    }
+                    # Translate the experiences into the "path" that RL-Teacher expects
+                    # TODO Cut off the first frame because it's left over from a previous episode?
+                    path["obs"] += [e.state for e in experiences]
+                    path["original_rewards"] += [e.reward for e in experiences]
+                    path["action"] += [e.action for e in experiences]
+                    path["human_obs"] += [e.human_obs for e in experiences]
 
                     # Note: This "prediction" is a different kind than is used in A3C.
                     # This is prediction by RL-Teacher of the "true" reward known by a human.
+                    #  TODO SPEED UP!! THIS IS SLOWING THINGS DOWN! BECAUSE IT'S OPERATING ON THE WHOLE PATH!
                     path["rewards"] = Config.REWARD_MODIFIER.predict_reward(path)
-                    if hasattr(Config.REWARD_MODIFIER, 'path_callback'):
-                        Config.REWARD_MODIFIER.path_callback(path, 1)  # TODO: Figure out how to put the iteration count in here!
+                    if done and self.id == 1:
+                        # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
+                        if hasattr(Config.REWARD_MODIFIER, 'path_callback'):
+                            Config.REWARD_MODIFIER.path_callback(path, iteration)
 
                     # Translate new rewards back into the experiences
                     for i in range(len(experiences)):
-                        experiences[i].reward = path["rewards"][i]
+                        # Work backwards because the path is longer than the experience list, but their ends are synced
+                        experiences[-i].reward = path["rewards"][-i]
                 ################################
                 #   END REWARD MODIFICATIONS   #
                 ################################
@@ -148,10 +158,13 @@ class ProcessAgent(Process):
         time.sleep(np.random.rand())
         np.random.seed(np.int32(time.time() % 1 * 1000 + self.id * 10))
 
+        iteration = 0
+
         while self.exit_flag.value == 0:
+            iteration += 1
             total_reward = 0
             total_length = 0
-            for x_, r_, a_, reward_sum in self.run_episode():
+            for x_, r_, a_, reward_sum in self.run_episode(iteration):
                 total_reward += reward_sum
                 total_length += len(r_) + 1  # +1 for last frame that we drop
                 self.training_q.put((x_, r_, a_))
