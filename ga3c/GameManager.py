@@ -39,6 +39,9 @@ class GameManager:
             self.env = game
             self.game_name = str(game)
 
+    def is_atari(self):
+        return self.env.observation_space.shape == (210, 160, 3)
+
     def reset(self):
         observation = self.env.reset()
         return observation

@@ -116,13 +116,18 @@ class ProcessAgent(Process):
                 ################################
                 #  START REWARD MODIFICATIONS  #
                 ################################
+                original_rewards = [e.reward for e in experiences]
                 if hasattr(Config, "REWARD_MODIFIER"):
                     # Translate the experiences into the "path" that RL-Teacher expects
-                    # TODO Cut off the first frame because it's left over from a previous episode?
-                    path["obs"] += [e.state for e in experiences]
-                    path["original_rewards"] += [e.reward for e in experiences]
-                    path["action"] += [e.action for e in experiences]
-                    path["human_obs"] += [e.human_obs for e in experiences]
+                    if len(path["obs"]) > 0:
+                        # Cut off the first item in the list because it's from an old episode
+                        new_experiences = experiences[1:]
+                    else:
+                        new_experiences = experiences
+                    path["obs"] += [e.state for e in new_experiences]
+                    path["original_rewards"] += [e.reward for e in new_experiences]
+                    path["action"] += [e.action for e in new_experiences]
+                    path["human_obs"] += [e.human_obs for e in new_experiences]
 
                     # Note: This "prediction" is a different kind than is used in A3C.
                     # This is prediction by RL-Teacher of the "true" reward known by a human.
@@ -136,7 +141,13 @@ class ProcessAgent(Process):
                     # Translate new rewards back into the experiences
                     for i in range(len(experiences)):
                         # Work backwards because the path is longer than the experience list, but their ends are synced
-                        experiences[-i].reward = path["rewards"][-i]
+                        experiences[-(1+i)].reward = path["rewards"][-(1+i)]
+                if sum([o - e.reward for o,e in zip(original_rewards, experiences)]) != 0:
+                    print(original_rewards)
+                    print([e.reward for e in experiences])
+                    print(sum([o - e.reward for o,e in zip(original_rewards, experiences)]))
+                    print(path["rewards"])
+                    raise Exception("WTF")
                 ################################
                 #   END REWARD MODIFICATIONS   #
                 ################################

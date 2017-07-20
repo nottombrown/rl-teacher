@@ -40,6 +40,7 @@ from ga3c.GameManager import GameManager
 class Environment:
     def __init__(self):
         self.game = GameManager(Config.ATARI_GAME, display=Config.PLAY_MODE)
+        self.atari = self.game.is_atari()
         self.nb_frames = Config.STACKED_FRAMES
         self.frame_q = Queue(maxsize=self.nb_frames)
         self.previous_state = None
@@ -69,8 +70,9 @@ class Environment:
     def _update_frame_q(self, frame):
         if self.frame_q.full():
             self.frame_q.get()
-        image = Environment._preprocess(frame)
-        self.frame_q.put(image)
+        if self.atari:
+            frame = Environment._preprocess(frame)
+        self.frame_q.put(frame)
 
     def get_num_actions(self):
         return self.game.env.action_space.n
