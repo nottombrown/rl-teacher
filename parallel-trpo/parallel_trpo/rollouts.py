@@ -145,8 +145,7 @@ class ParallelRollout(object):
             ################################
             path["original_rewards"] = path["rewards"]
             path["rewards"] = self.predictor.predict_reward(path)
-            if hasattr(self.predictor, 'path_callback'):
-                self.predictor.path_callback(path, iteration)
+            self.predictor.path_callback(path, iteration)
             ################################
             #   END REWARD MODIFICATIONS   #
             ################################
