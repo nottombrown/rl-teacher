@@ -163,8 +163,6 @@ class ComparisonRewardPredictor():
                 self.segment_placeholder_Ds: validation_q_states,
                 K.learning_phase(): False
             })
-            reward_pred_Ds = reward_pred_Ds[:len(validation_q_states)]
-
             ep_reward_pred = np.sum(reward_pred_Ds, axis=1)
             self.agent_logger.log_simple("validation/pred_per_episode", np.mean(ep_reward_pred))
             reward_true_Ds = np.asarray([path['original_rewards'] for path in recent_paths])
