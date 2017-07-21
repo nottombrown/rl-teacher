@@ -3,8 +3,9 @@
 `rl-teacher` is an implementation of *Deep Reinforcement Learning from Human Preferences* (https://arxiv.org/abs/1706.03741)
 
 The system allows you to train a reinforcement learning agent to do novel behaviors, even when:
-A) the task/behavior does not have a pre-defined reward function, and
-B) a human can recognize the desired behavior, but they cannot demonstrate it.
+
+1. the task/behavior does not have a pre-defined reward function, and
+2. a human can recognize the desired behavior, but they cannot demonstrate it.
 
 It's also just a lot of fun to train simulated robots to do whatever you want! For example, in the MuJoCo "Hopper" environment, the agent is usually rewarded for moving forwards, but you might want to teach it to do a backflip instead:
 
