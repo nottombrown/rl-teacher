@@ -103,8 +103,6 @@ class ComparisonRewardPredictor():
         with tf.name_scope('predictor'):
             tf.summary.scalar("reward_pred_loss", self.loss_op)
             tf.summary.scalar("predicted_reward_per_step", tf.reduce_mean(self.q_state_reward_pred_Ds))
-            # true_reward_per_step = tf.reduce_mean(self.segment_reward_placeholder) / tf.cast(segment_length, tf.float32)
-            # tf.summary.scalar("true_reward_per_step", true_reward_per_step)
 
         self.summary_op = tf.summary.merge_all()
 
