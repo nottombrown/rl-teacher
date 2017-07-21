@@ -97,12 +97,6 @@ class ComparisonRewardPredictor():
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss_op, global_step=self.global_step)
 
-        with tf.name_scope('predictor'):
-            tf.summary.scalar("reward_pred_loss", self.loss_op)
-            tf.summary.scalar("predicted_reward_per_segment", tf.reduce_mean(segment_reward_pred_left))
-
-        self.summary_op = tf.summary.merge_all()
-
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
         reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
@@ -141,20 +135,16 @@ class ComparisonRewardPredictor():
         left_q_states = np.asarray([comp['left']['q_states'] for comp in labeled_comparisons])
         right_q_states = np.asarray([comp['right']['q_states'] for comp in labeled_comparisons])
 
-        _, summary, loss = self.sess.run([self.train_op, self.summary_op, self.loss_op], feed_dict={
+        _, loss = self.sess.run([self.train_op, self.loss_op], feed_dict={
             self.segment_placeholder_Ds: left_q_states,
             self.segment_alt_placeholder_Ds: right_q_states,
             self.labels: np.asarray([comp['label'] for comp in labeled_comparisons]),
             K.learning_phase(): True
         })
-        self.summary_writer.add_summary(summary, self.agent_logger.summary_step)
-        self._write_training_summaries()
+        self._write_training_summaries(loss)
 
-    def _write_training_summaries(self):
-        self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
-        self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
-        self.agent_logger.log_simple("labels/labeled_comparisons",
-            len(self.comparison_collector.labeled_decisive_comparisons))
+    def _write_training_summaries(self, loss):
+        self.agent_logger.log_simple("predictor/loss", loss)
 
         # Calculate correlation between true and predicted reward by running validation on recent episodes
         recent_paths = self.agent_logger.last_n_paths
@@ -167,7 +157,13 @@ class ComparisonRewardPredictor():
             ep_reward_pred = np.sum(reward_pred_Ds, axis=1)
             reward_true_Ds = np.asarray([path['original_rewards'] for path in recent_paths])
             ep_reward_true = np.sum(reward_true_Ds, axis=1)
-            self.agent_logger.log_simple("validation/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
+            self.agent_logger.log_simple("predicitor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
+
+        self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
+        self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
+        self.agent_logger.log_simple("labels/labeled_comparisons",
+            len(self.comparison_collector.labeled_decisive_comparisons))
+
 
 def main():
     import argparse
