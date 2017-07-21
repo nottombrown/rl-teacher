@@ -157,7 +157,7 @@ class ComparisonRewardPredictor():
             ep_reward_pred = np.sum(reward_pred_Ds, axis=1)
             reward_true_Ds = np.asarray([path['original_rewards'] for path in recent_paths])
             ep_reward_true = np.sum(reward_true_Ds, axis=1)
-            self.agent_logger.log_simple("predicitor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
+            self.agent_logger.log_simple("predictor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
 
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
