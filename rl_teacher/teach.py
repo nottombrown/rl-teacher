@@ -13,7 +13,7 @@ from rl_teacher.comparison_collectors import SyntheticComparisonCollector, Human
 from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.label_schedules import LabelAnnealer, ConstantLabelSchedule
-from rl_teacher.nn import two_layer_fc_net
+from rl_teacher.nn import FullyConnectedMLP
 from rl_teacher.segment_sampling import SegmentVideoRecorder
 from rl_teacher.segment_sampling import create_segment_q_states
 from rl_teacher.segment_sampling import sample_segment_from_path
@@ -35,6 +35,7 @@ class TraditionalRLRewardPredictor():
 
 class ComparisonRewardPredictor():
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
+
     def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule):
         self.summary_writer = summary_writer
         self.agent_logger = agent_logger
@@ -49,43 +50,39 @@ class ComparisonRewardPredictor():
 
         # Build and initialize our predictor model
         self.sess = tf.InteractiveSession()
-        q_state_size = np.product(env.observation_space.shape) + np.product(env.action_space.shape)
-        self.build_model(q_state_size)
+        self.q_state_size = np.product(env.observation_space.shape) + np.product(env.action_space.shape)
+        self.build_model()
         self.sess.run(tf.global_variables_initializer())
 
-    def build_model(self, q_state_size):
-        """Our model takes in a vector of q_states from a segment and returns a reward for each one"""
-        self.segment_placeholder_Ds = tf.placeholder(
-            dtype=tf.float32, shape=(None, None, q_state_size), name="obs_placeholder")
-        self.segment_alt_placeholder_Ds = tf.placeholder(
-            dtype=tf.float32, shape=(None, None, q_state_size), name="obs_placeholder")
-
-        batchsize = tf.shape(self.segment_placeholder_Ds)[0]
-        joint_batchsize = batchsize * 2
-        segment_length = tf.shape(self.segment_placeholder_Ds)[1]
-
-        # Join both segment placeholder inputs (left and right)
-        segments_Ds = tf.concat([self.segment_placeholder_Ds, self.segment_alt_placeholder_Ds], axis=0)
+    def predict_reward_Ds(self, segments_Ds):
+        segment_length = tf.shape(segments_Ds)[1]
+        batchsize = tf.shape(segments_Ds)[0]
 
         # Temporarily chop up segments into individual q_states
-        q_state_Dbs = tf.reshape(segments_Ds, [joint_batchsize * segment_length, q_state_size])
+        q_state_Dbs = tf.reshape(segments_Ds, [batchsize * segment_length, self.q_state_size])
+
+        # Run them through our MLP
+        rew_Dbs = self.mlp.run(q_state_Dbs)
+
+        # Group the rewards back into their segments
+        return tf.reshape(rew_Dbs, (batchsize, segment_length))
+
+    def build_model(self):
+        """Our model takes in a vector of q_states from a segment and returns a reward for each one"""
+        self.segment_placeholder_Ds = tf.placeholder(
+            dtype=tf.float32, shape=(None, None, self.q_state_size), name="obs_placeholder")
+        self.segment_alt_placeholder_Ds = tf.placeholder(
+            dtype=tf.float32, shape=(None, None, self.q_state_size), name="obs_placeholder")
 
         # A vanilla MLP maps a q_state to a reward
-        rew_Dbs = two_layer_fc_net(q_state_Dbs)
-
-        # Group the q_states back into their segments
-        self.q_state_reward_pred_Ds = tf.reshape(rew_Dbs, (joint_batchsize, segment_length))
+        self.mlp = FullyConnectedMLP(self.q_state_size)
+        self.q_state_reward_pred_Ds = self.predict_reward_Ds(self.segment_placeholder_Ds)
+        q_state_alt_reward_pred_Ds = self.predict_reward_Ds(self.segment_alt_placeholder_Ds)
 
         # We use trajectory segments rather than individual q_states because video clips of segments are easier for
         # humans to evaluate
-        segment_reward_pred = tf.reduce_sum(self.q_state_reward_pred_Ds, axis=1)
-
-        # TODO; refactor this so we just pass our values through the graph twice, pull the nn weights into an
-        # Separate left and right back apart
-        segment_reward_pred_left = tf.slice(segment_reward_pred, [0], [batchsize])
-        segment_reward_pred_right = tf.slice(segment_reward_pred, [batchsize], [batchsize])
-
-        # Compute our reward
+        segment_reward_pred_left = tf.reduce_sum(self.q_state_reward_pred_Ds, axis=1)
+        segment_reward_pred_right = tf.reduce_sum(q_state_alt_reward_pred_Ds, axis=1)
         reward_logits_D2 = tf.stack([segment_reward_pred_left, segment_reward_pred_right], axis=1)
 
         self.labels = tf.placeholder(dtype=tf.int32, shape=(None,), name="comparison_labels")
@@ -102,7 +99,7 @@ class ComparisonRewardPredictor():
 
         with tf.name_scope('predictor'):
             tf.summary.scalar("reward_pred_loss", self.loss_op)
-            tf.summary.scalar("predicted_reward_per_step", tf.reduce_mean(self.q_state_reward_pred_Ds))
+            tf.summary.scalar("predicted_reward_per_segment", tf.reduce_mean(segment_reward_pred_left))
 
         self.summary_op = tf.summary.merge_all()
 
