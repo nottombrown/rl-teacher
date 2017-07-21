@@ -120,7 +120,6 @@ The training process generates rendered trajectory segments for you to provide f
 
 If you don't already have GCS set up, [create a new GCS account](https://cloud.google.com/storage/docs/) and set up a new project. Then, use the following commands to create a bucket to host your media and set this new bucket to be publicly-readable.
 
-
     export RL_TEACHER_GCS_BUCKET="gs://rl-teacher-<YOUR_NAME>"
     gsutil mb $RL_TEACHER_GCS_BUCKET
     gsutil defacl ch -u AllUsers:R $RL_TEACHER_GCS_BUCKET
