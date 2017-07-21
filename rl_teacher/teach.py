@@ -130,7 +130,6 @@ class ComparisonRewardPredictor():
         segments = np.array([create_segment_q_states(path)])
         reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
             self.segment_placeholder_Ds: segments,
-            self.segment_alt_placeholder_Ds: np.zeros(segments.shape),  # We don't use the alt placeholder for inference
             K.learning_phase(): False
         })
         return reward_pred_Ds[0]
@@ -162,8 +161,6 @@ class ComparisonRewardPredictor():
             validation_q_states = np.asarray([create_segment_q_states(path) for path in recent_paths])
             reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
                 self.segment_placeholder_Ds: validation_q_states,
-                self.segment_alt_placeholder_Ds: np.zeros(validation_q_states.shape),
-                # We don't use the alt placeholder
                 K.learning_phase(): False
             })
             reward_pred_Ds = reward_pred_Ds[:len(validation_q_states)]
