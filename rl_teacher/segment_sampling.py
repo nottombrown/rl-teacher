@@ -49,6 +49,7 @@ class SegmentVideoRecorder(object):
                 self._counter += 1
         else:
             self._counter = 0
+        self.predictor.path_callback(path, iteration)
 
     def predict_reward(self, path):
         return self.predictor.predict_reward(path)
@@ -58,6 +59,10 @@ class RandomRolloutSegmentCollector(object):
         self.n_desired_segments = n_desired_segments
         self.fps = fps
         self.segments = []
+
+    def predict_reward(self, path):
+        # Reward is unused during random rollout so just return a tiny value
+        return np.ones(len(path["obs"])) * 1e-9
 
     def path_callback(self, path, iteration):
         clip_length_in_seconds = 1.5
@@ -70,10 +75,6 @@ class RandomRolloutSegmentCollector(object):
 
         if len(self.segments) >= self.n_desired_segments:
             raise SuccessfullyCollectedSegments()
-
-    def predict_reward(self, path):
-        # Reward is unused during random rollout so just return a tiny value
-        return np.ones(len(path["obs"])) * 1e-9
 
 class SuccessfullyCollectedSegments(Exception):
     pass

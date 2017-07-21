@@ -51,10 +51,10 @@ class ComparisonRewardPredictor():
         # Build and initialize our predictor model
         self.sess = tf.InteractiveSession()
         self.q_state_size = np.product(env.observation_space.shape) + np.product(env.action_space.shape)
-        self.build_model()
+        self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
-    def predict_reward_Ds(self, segments_Ds):
+    def _predict_reward_Ds(self, segments_Ds):
         segment_length = tf.shape(segments_Ds)[1]
         batchsize = tf.shape(segments_Ds)[0]
 
@@ -67,7 +67,7 @@ class ComparisonRewardPredictor():
         # Group the rewards back into their segments
         return tf.reshape(rew_Dbs, (batchsize, segment_length))
 
-    def build_model(self):
+    def _build_model(self):
         """Our model takes in a vector of q_states from a segment and returns a reward for each one"""
         self.segment_placeholder_Ds = tf.placeholder(
             dtype=tf.float32, shape=(None, None, self.q_state_size), name="obs_placeholder")
@@ -76,8 +76,8 @@ class ComparisonRewardPredictor():
 
         # A vanilla MLP maps a q_state to a reward
         self.mlp = FullyConnectedMLP(self.q_state_size)
-        self.q_state_reward_pred_Ds = self.predict_reward_Ds(self.segment_placeholder_Ds)
-        q_state_alt_reward_pred_Ds = self.predict_reward_Ds(self.segment_alt_placeholder_Ds)
+        self.q_state_reward_pred_Ds = self._predict_reward_Ds(self.segment_placeholder_Ds)
+        q_state_alt_reward_pred_Ds = self._predict_reward_Ds(self.segment_alt_placeholder_Ds)
 
         # We use trajectory segments rather than individual q_states because video clips of segments are easier for
         # humans to evaluate
@@ -105,6 +105,13 @@ class ComparisonRewardPredictor():
 
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
+        reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
+            self.segment_placeholder_Ds: np.array([create_segment_q_states(path)]),
+            K.learning_phase(): False
+        })
+        return reward_pred_Ds[0]
+
+    def path_callback(self, path, iteration):
         path_length = len(path["obs"])
         self._steps_since_last_training += path_length
 
@@ -125,14 +132,6 @@ class ComparisonRewardPredictor():
         if self._steps_since_last_training >= int(self._n_paths_per_predictor_training):
             self.train_predictor()
             self._steps_since_last_training -= self._steps_since_last_training
-
-        # Run inference through our predictor
-        segments = np.array([create_segment_q_states(path)])
-        reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
-            self.segment_placeholder_Ds: segments,
-            K.learning_phase(): False
-        })
-        return reward_pred_Ds[0]
 
     def train_predictor(self):
         self.comparison_collector.label_unlabeled_comparisons()
