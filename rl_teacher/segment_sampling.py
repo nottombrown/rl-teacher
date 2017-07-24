@@ -61,7 +61,7 @@ class RandomRolloutSegmentCollector(object):
         self.segments = []
 
     def predict_reward(self, path):
-        epsilon = 1e-9 # Reward is unused during random rollout so we return a tiny value for each q_state
+        epsilon = 1e-9  # Reward is unused during random rollout so we return a tiny value for each q_state
         return np.ones(len(path["obs"])) * epsilon
 
     def path_callback(self, path, iteration):
@@ -82,7 +82,7 @@ class SuccessfullyCollectedSegments(Exception):
 def segments_from_rand_rollout(seed, env_id, env, n_segments):
     collector = RandomRolloutSegmentCollector(n_segments, fps=env.fps)
     try:
-        with  tf.Graph().as_default():
+        with tf.Graph().as_default():
             train_parallel(
                 env_id=env_id,
                 make_env=make_with_torque_removed,
