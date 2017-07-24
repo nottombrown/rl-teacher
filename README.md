@@ -3,8 +3,9 @@
 `rl-teacher` is an implementation of *Deep Reinforcement Learning from Human Preferences* (https://arxiv.org/abs/1706.03741)
 
 The system allows you to train a reinforcement learning agent to do novel behaviors, even when:
-A) the task/behavior does not have a pre-defined reward function, and
-B) a human can recognize the desired behavior, but they cannot demonstrate it.
+
+1. the task/behavior does not have a pre-defined reward function, and
+2. a human can recognize the desired behavior, but they cannot demonstrate it.
 
 It's also just a lot of fun to train simulated robots to do whatever you want! For example, in the MuJoCo "Hopper" environment, the agent is usually rewarded for moving forwards, but you might want to teach it to do a backflip instead:
 
@@ -50,7 +51,7 @@ Then run the following to install the rl-teacher code into your conda environmen
     cd ~/rl-teacher
     pip install -e .
     pip install -e human-feedback-api
-    pip install -e parallel-trpo
+    pip install -e parallel-trpo[tf]
 
 
 # Usage
@@ -118,7 +119,6 @@ You should now be able to open the webapp by navigating to http://127.0.0.1:8000
 The training process generates rendered trajectory segments for you to provide feedback on. These are stored in Google Cloud Storage (GCS), so you will need to set up a GCS bucket.
 
 If you don't already have GCS set up, [create a new GCS account](https://cloud.google.com/storage/docs/) and set up a new project. Then, use the following commands to create a bucket to host your media and set this new bucket to be publicly-readable.
-
 
     export RL_TEACHER_GCS_BUCKET="gs://rl-teacher-<YOUR_NAME>"
     gsutil mb $RL_TEACHER_GCS_BUCKET

@@ -1,14 +1,20 @@
 from keras.layers import Dense, Dropout, LeakyReLU
+from keras.models import Sequential
 
-def two_layer_fc_net(x, h_size=64):
+class FullyConnectedMLP(object):
     """Vanilla two hidden layer multi-layer perceptron"""
-    x = Dense(h_size)(x)
-    x = LeakyReLU()(x)
 
-    x = Dropout(0.5)(x)
-    x = Dense(h_size)(x)
-    x = LeakyReLU()(x)
+    def __init__(self, input_dim, h_size=64):
+        self.model = Sequential()
+        self.model.add(Dense(h_size, input_dim=input_dim))
+        self.model.add(LeakyReLU())
 
-    x = Dropout(0.5)(x)
-    x = Dense(1)(x)
-    return x
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(h_size))
+        self.model.add(LeakyReLU())
+
+        self.model.add(Dropout(0.5))
+        self.model.add(Dense(1))
+
+    def run(self, x):
+        return self.model(x)

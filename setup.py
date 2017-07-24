@@ -7,11 +7,15 @@ setup(name='rl_teacher',
         'gym[mujoco]',
         'mujoco-py',
         'tqdm',
-        'tensorflow', # Tested on Tensorflow 1.2
         'matplotlib',
         'ipython',
         'scipy',
         'ipdb',
         'keras',
-    ]
+    ],
+    # https://github.com/tensorflow/tensorflow/issues/7166#issuecomment-280881808
+    extras_require={
+        "tf": ["tensorflow ~= 1.2"],
+        "tf_gpu": ["tensorflow-gpu >= 1.1"],
+    }
 )
