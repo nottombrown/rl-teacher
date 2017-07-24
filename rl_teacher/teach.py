@@ -150,7 +150,7 @@ class ComparisonRewardPredictor():
 
         # Calculate correlation between true and predicted reward by running validation on recent episodes
         recent_paths = self.agent_logger.last_n_paths
-        if recent_paths and self.agent_logger.summary_step % 10 == 0: # Run validation every 10 iters
+        if recent_paths and self.agent_logger.summary_step % 10 == 0:  # Run validation every 10 iters
             validation_q_states = np.asarray([create_segment_q_states(path) for path in recent_paths])
             reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
                 self.segment_placeholder_Ds: validation_q_states,
@@ -163,8 +163,8 @@ class ComparisonRewardPredictor():
 
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
-        self.agent_logger.log_simple("labels/labeled_comparisons",
-            len(self.comparison_collector.labeled_decisive_comparisons))
+        self.agent_logger.log_simple(
+            "labels/labeled_comparisons", len(self.comparison_collector.labeled_decisive_comparisons))
 
 
 def main():
@@ -251,8 +251,7 @@ def main():
 
     # Wrap the predictor to capture videos every so often:
     wrapped_predictor = SegmentVideoRecorder(
-        predictor, env, checkpoint_interval=2,
-        save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
+        predictor, env, checkpoint_interval=2, save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`

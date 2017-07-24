@@ -61,7 +61,7 @@ class RandomRolloutSegmentCollector(object):
         self.segments = []
 
     def predict_reward(self, path):
-        epsilon = 1e-9 # Reward is unused during random rollout so we return a tiny value for each q_state
+        epsilon = 1e-9  # Reward is unused during random rollout so we return a tiny value for each q_state
         return np.ones(len(path["obs"])) * epsilon
 
     def path_callback(self, path, iteration):
@@ -92,7 +92,6 @@ def segments_from_rand_rollout(seed, env_id, env, n_segments, workers=4):
                 # run a bunch of async processes that collect rollouts
                 # Eventually this will cause an exception
                 rollouts.rollout(timesteps_per_batch, iteration)
-
     except SuccessfullyCollectedSegments:
         print("Successfully collected %s segments" % len(collector.segments))
         return collector.segments
