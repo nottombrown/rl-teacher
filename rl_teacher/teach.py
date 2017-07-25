@@ -54,43 +54,47 @@ class ComparisonRewardPredictor():
         self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
-    def _predict_reward_Ds(self, segments_Ds):
-        segment_length = tf.shape(segments_Ds)[1]
-        batchsize = tf.shape(segments_Ds)[0]
+    def _predict_rewards(self, segments):
+        """
+        :param segments: tensor with shape = (batch_size, segment_length, q_state_size)
+        :return: tensor with shape = (batch_size, segment_length)
+        """
+        segment_length = tf.shape(segments)[1]
+        batchsize = tf.shape(segments)[0]
 
         # Temporarily chop up segments into individual q_states
-        q_state_Dbs = tf.reshape(segments_Ds, [batchsize * segment_length, self.q_state_size])
+        q_states = tf.reshape(segments, [batchsize * segment_length, self.q_state_size])
 
         # Run them through our MLP
-        rew_Dbs = self.mlp.run(q_state_Dbs)
+        rewards = self.mlp.run(q_states)
 
         # Group the rewards back into their segments
-        return tf.reshape(rew_Dbs, (batchsize, segment_length))
+        return tf.reshape(rewards, (batchsize, segment_length))
 
     def _build_model(self):
         """Our model takes in a vector of q_states from a segment and returns a reward for each one"""
-        self.segment_placeholder_Ds = tf.placeholder(
+        self.segment_placeholder = tf.placeholder(
             dtype=tf.float32, shape=(None, None, self.q_state_size), name="obs_placeholder")
-        self.segment_alt_placeholder_Ds = tf.placeholder(
+        self.segment_alt_placeholder = tf.placeholder(
             dtype=tf.float32, shape=(None, None, self.q_state_size), name="obs_placeholder")
 
         # A vanilla MLP maps a q_state to a reward
         self.mlp = FullyConnectedMLP(self.q_state_size)
-        self.q_state_reward_pred_Ds = self._predict_reward_Ds(self.segment_placeholder_Ds)
-        q_state_alt_reward_pred_Ds = self._predict_reward_Ds(self.segment_alt_placeholder_Ds)
+        self.q_state_reward_pred = self._predict_rewards(self.segment_placeholder)
+        q_state_alt_reward_pred = self._predict_rewards(self.segment_alt_placeholder)
 
         # We use trajectory segments rather than individual q_states because video clips of segments are easier for
         # humans to evaluate
-        segment_reward_pred_left = tf.reduce_sum(self.q_state_reward_pred_Ds, axis=1)
-        segment_reward_pred_right = tf.reduce_sum(q_state_alt_reward_pred_Ds, axis=1)
-        reward_logits_D2 = tf.stack([segment_reward_pred_left, segment_reward_pred_right], axis=1)
+        segment_reward_pred_left = tf.reduce_sum(self.q_state_reward_pred, axis=1)
+        segment_reward_pred_right = tf.reduce_sum(q_state_alt_reward_pred, axis=1)
+        reward_logits = tf.stack([segment_reward_pred_left, segment_reward_pred_right], axis=1)  # (batch_size, 2)
 
         self.labels = tf.placeholder(dtype=tf.int32, shape=(None,), name="comparison_labels")
 
         # delta = 1e-5
         # clipped_comparison_labels = tf.clip_by_value(self.comparison_labels, delta, 1.0-delta)
 
-        data_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=reward_logits_D2, labels=self.labels)
+        data_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=reward_logits, labels=self.labels)
 
         self.loss_op = tf.reduce_mean(data_loss)
 
@@ -99,11 +103,11 @@ class ComparisonRewardPredictor():
 
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
-        reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
-            self.segment_placeholder_Ds: np.array([create_segment_q_states(path)]),
+        q_state_reward_pred = self.sess.run(self.q_state_reward_pred, feed_dict={
+            self.segment_placeholder: np.array([create_segment_q_states(path)]),
             K.learning_phase(): False
         })
-        return reward_pred_Ds[0]
+        return q_state_reward_pred[0]
 
     def path_callback(self, path, iteration):
         path_length = len(path["obs"])
@@ -136,8 +140,8 @@ class ComparisonRewardPredictor():
         right_q_states = np.asarray([comp['right']['q_states'] for comp in labeled_comparisons])
 
         _, loss = self.sess.run([self.train_op, self.loss_op], feed_dict={
-            self.segment_placeholder_Ds: left_q_states,
-            self.segment_alt_placeholder_Ds: right_q_states,
+            self.segment_placeholder: left_q_states,
+            self.segment_alt_placeholder: right_q_states,
             self.labels: np.asarray([comp['label'] for comp in labeled_comparisons]),
             K.learning_phase(): True
         })
@@ -150,20 +154,19 @@ class ComparisonRewardPredictor():
         recent_paths = self.agent_logger.last_n_paths
         if recent_paths and self.agent_logger.summary_step % 10 == 0:  # Run validation every 10 iters
             validation_q_states = np.asarray([create_segment_q_states(path) for path in recent_paths])
-            reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
-                self.segment_placeholder_Ds: validation_q_states,
+            q_state_reward_pred = self.sess.run(self.q_state_reward_pred, feed_dict={
+                self.segment_placeholder: validation_q_states,
                 K.learning_phase(): False
             })
-            ep_reward_pred = np.sum(reward_pred_Ds, axis=1)
-            reward_true_Ds = np.asarray([path['original_rewards'] for path in recent_paths])
-            ep_reward_true = np.sum(reward_true_Ds, axis=1)
+            ep_reward_pred = np.sum(q_state_reward_pred, axis=1)
+            q_state_reward_true = np.asarray([path['original_rewards'] for path in recent_paths])
+            ep_reward_true = np.sum(q_state_reward_true, axis=1)
             self.agent_logger.log_simple("predictor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
 
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
         self.agent_logger.log_simple(
             "labels/labeled_comparisons", len(self.comparison_collector.labeled_decisive_comparisons))
-
 
 def main():
     import argparse
