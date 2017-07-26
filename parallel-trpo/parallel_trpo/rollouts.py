@@ -104,7 +104,7 @@ class Actor(multiprocess.Process):
                     "avg_action_dist": np.concatenate(avg_action_dists),
                     "logstd_action_dist": np.concatenate(logstd_action_dists),
                     "rewards": np.array(rewards),
-                    "action": np.array(actions),
+                    "actions": np.array(actions),
                     "human_obs": np.array(human_obs)}
                 return path
 

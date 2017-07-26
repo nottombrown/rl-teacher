@@ -7,7 +7,7 @@ from rl_teacher.video import write_segment_to_video
 
 def create_segment_q_states(segment):
     obs_Ds = segment["obs"]
-    act_Ds = segment["action"]
+    act_Ds = segment["actions"]
     return np.concatenate([obs_Ds, act_Ds], axis=1)
 
 def sample_segment_from_path(path, segment_length):
@@ -23,7 +23,7 @@ def sample_segment_from_path(path, segment_length):
     segment = {
         k: np.asarray(v[start_pos:(start_pos + segment_length)])
         for k, v in path.items()
-        if k in ['obs', 'action', 'original_rewards', 'human_obs']}
+        if k in ['obs', "actions", 'original_rewards', 'human_obs']}
 
     # Add q_states
     segment['q_states'] = create_segment_q_states(segment)
@@ -37,21 +37,22 @@ class SegmentVideoRecorder(object):
         self.checkpoint_interval = checkpoint_interval
         self.save_dir = save_dir
 
-        self._iteration = 0  # Internal counter of how many paths we've seen
+        self._num_paths_seen = 0  # Internal counter of how many paths we've seen
         self._counter = 0  # Internal counter of how many videos we've saved at a given iteration.
 
     def path_callback(self, path):
-        if self._iteration % self.checkpoint_interval == 0:
+        if self._num_paths_seen % self.checkpoint_interval == 0 and self._num_paths_seen != 0:
             if self._counter < self.n_desired_videos_per_checkpoint:
-                fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._iteration, self._counter)
-                print("Saving video of run %s_%s to %s" % (self._iteration, self._counter, fname))
+                fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._num_paths_seen, self._counter)
+                print("Saving video of run %s_%s to %s" % (self._num_paths_seen, self._counter, fname))
                 full_run = sample_segment_from_path(path, len(path['obs']))
                 write_segment_to_video(full_run, fname, self.env)
                 self._counter += 1
         else:
             self._counter = 0
-        self._iteration += 1
-        self.predictor.path_callback(path, self._iteration)
+
+        self._num_paths_seen += 1
+        self.predictor.path_callback(path)
 
     def predict_reward(self, path):
         return self.predictor.predict_reward(path)

@@ -8,11 +8,12 @@ from pposgd_mpi.common.mpi_moments import mpi_moments
 from mpi4py import MPI
 from collections import deque
 
-def traj_segment_generator(pi, env, horizon, stochastic):
+def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
     t = 0
     ac = env.action_space.sample() # not used, just so we have the datatype
+    _ = env.reset()
+    ob, rew, new, info = env.step(ac) # Take one step so that we can get the datatype of info.get("human_obs")
     new = True # marks if we're on first timestep of an episode
-    ob = env.reset()
 
     cur_ep_ret = 0 # return in current episode
     cur_ep_len = 0 # len of current episode
@@ -21,6 +22,7 @@ def traj_segment_generator(pi, env, horizon, stochastic):
 
     # Initialize history arrays
     obs = np.array([ob for _ in range(horizon)])
+    human_obs = np.array([info.get("human_obs") for _ in range(horizon)])
     rews = np.zeros(horizon, 'float32')
     vpreds = np.zeros(horizon, 'float32')
     news = np.zeros(horizon, 'int32')
@@ -34,21 +36,37 @@ def traj_segment_generator(pi, env, horizon, stochastic):
         # before returning segment [0, T-1] so we get the correct
         # terminal value
         if t > 0 and t % horizon == 0:
-            yield {"ob" : obs, "rew" : rews, "vpred" : vpreds, "new" : news,
-                    "ac" : acs, "prevac" : prevacs, "nextvpred": vpred * (1 - new),
-                    "ep_rets" : ep_rets, "ep_lens" : ep_lens}
+            path = {"obs" : obs, "rew" : rews, "vpred" : vpreds, "new" : news,
+                    "actions" : acs, "prevac" : prevacs, "nextvpred": vpred * (1 - new),
+                    "ep_rets" : ep_rets, "ep_lens" : ep_lens, "human_obs" : human_obs}
+
+
+            ################################
+            #  START REWARD MODIFICATIONS  #
+            ################################
+            if predictor:
+                path["original_rewards"] = path["rew"]
+                path["rew"] = predictor.predict_reward(path)
+                predictor.path_callback(path)
+            ################################
+            #   END REWARD MODIFICATIONS   #
+            ################################
+
+            yield path
+
             # Be careful!!! if you change the downstream algorithm to aggregate
             # several of these batches, then be sure to do a deepcopy
             ep_rets = []
             ep_lens = []
         i = t % horizon
         obs[i] = ob
+        human_obs[i] = info.get("human_obs")
         vpreds[i] = vpred
         news[i] = new
         acs[i] = ac
         prevacs[i] = prevac
 
-        ob, rew, new, _ = env.step(ac)
+        ob, rew, new, info = env.step(ac)
         rews[i] = rew
 
         cur_ep_ret += rew
@@ -84,7 +102,8 @@ def learn(env, policy_func, *,
         gamma, lam, # advantage estimation
         max_timesteps=0, max_episodes=0, max_iters=0, max_seconds=0,  # time constraint
         callback=None, # you can do anything in the callback, since it takes locals(), globals()
-        schedule='constant' # annealing for stepsize parameters (epsilon and adam)
+        schedule='constant', # annealing for stepsize parameters (epsilon and adam)
+        predictor=None
         ):
     # Setup losses and stuff
     # ----------------------------------------
@@ -98,7 +117,7 @@ def learn(env, policy_func, *,
     lrmult = tf.placeholder(name='lrmult', dtype=tf.float32, shape=[]) # learning rate multiplier, updated with schedule
     clip_param = clip_param * lrmult # Annealed cliping parameter epislon
 
-    ob = U.get_placeholder_cached(name="ob")
+    ob = U.get_placeholder_cached(name="obs")
     ac = pi.pdtype.sample_placeholder([None])
 
     kloldnew = oldpi.pd.kl(pi.pd)
@@ -132,7 +151,7 @@ def learn(env, policy_func, *,
 
     # Prepare for rollouts
     # ----------------------------------------
-    seg_gen = traj_segment_generator(pi, env, timesteps_per_batch, stochastic=True)
+    seg_gen = traj_segment_generator(pi, env, timesteps_per_batch, stochastic=True, predictor=predictor)
 
     episodes_so_far = 0
     timesteps_so_far = 0
@@ -166,11 +185,13 @@ def learn(env, policy_func, *,
         seg = seg_gen.__next__()
         add_vtarg_and_adv(seg, gamma, lam)
 
+
+
         # ob, ac, atarg, ret, td1ret = map(np.concatenate, (obs, acs, atargs, rets, td1rets))
-        ob, ac, atarg, tdlamret = seg["ob"], seg["ac"], seg["adv"], seg["tdlamret"]
-        vpredbefore = seg["vpred"] # predicted value function before udpate
+        ob, ac, atarg, tdlamret = seg["obs"], seg["actions"], seg["adv"], seg["tdlamret"]
+        vpredbefore = seg["vpred"] # predicted value function before update
         atarg = (atarg - atarg.mean()) / atarg.std() # standardized advantage function estimate
-        d = Dataset(dict(ob=ob, ac=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
+        d = Dataset(dict(obs=ob, actions=ac, atarg=atarg, vtarg=tdlamret), shuffle=not pi.recurrent)
         optim_batchsize = optim_batchsize or ob.shape[0]
 
         if hasattr(pi, "ob_rms"): pi.ob_rms.update(ob) # update running mean/std for policy
@@ -182,7 +203,7 @@ def learn(env, policy_func, *,
         for _ in range(optim_epochs):
             losses = [] # list of tuples, each of which gives the loss for a minibatch
             for batch in d.iterate_once(optim_batchsize):
-                *newlosses, g = lossandgrad(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
+                *newlosses, g = lossandgrad(batch["obs"], batch["actions"], batch["atarg"], batch["vtarg"], cur_lrmult)
                 adam.update(g, optim_stepsize * cur_lrmult) 
                 losses.append(newlosses)
             logger.log(fmt_row(13, np.mean(losses, axis=0)))
@@ -190,7 +211,7 @@ def learn(env, policy_func, *,
         logger.log("Evaluating losses...")
         losses = []
         for batch in d.iterate_once(optim_batchsize):
-            newlosses = compute_losses(batch["ob"], batch["ac"], batch["atarg"], batch["vtarg"], cur_lrmult)
+            newlosses = compute_losses(batch["obs"], batch["actions"], batch["atarg"], batch["vtarg"], cur_lrmult)
             losses.append(newlosses)            
         meanlosses,_,_ = mpi_moments(losses, axis=0)
         logger.log(fmt_row(13, meanlosses))

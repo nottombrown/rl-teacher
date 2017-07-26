@@ -17,7 +17,7 @@ class CnnPolicy(object):
         self.pdtype = pdtype = make_pdtype(ac_space)
         sequence_length = None
 
-        ob = U.get_placeholder(name="ob", dtype=tf.float32, shape=[sequence_length] + list(ob_space.shape))
+        ob = U.get_placeholder(name="obs", dtype=tf.float32, shape=[sequence_length] + list(ob_space.shape))
     
         x = ob / 255.0
         if kind == 'small': # from A3C paper
