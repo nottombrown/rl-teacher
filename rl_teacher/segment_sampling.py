@@ -16,18 +16,20 @@ def sample_segment_from_path(path, segment_length):
 
     if path_length < segment_length:
         return None
-
     start_pos = np.random.randint(0, path_length - segment_length + 1)
 
     # Build segment
-    segment = {
-        k: np.asarray(v[start_pos:(start_pos + segment_length)])
-        for k, v in path.items()
-        if k in ['obs', "actions", 'original_rewards', 'human_obs']}
+    segment = _slice_path(path, segment_length, start_pos)
 
     # Add q_states
     segment['q_states'] = create_segment_q_states(segment)
     return segment
+
+def _slice_path(path, segment_length, start_pos=0):
+    return {
+        k: np.asarray(v[start_pos:(start_pos + segment_length)])
+        for k, v in path.items()
+        if k in ['obs', "actions", 'original_rewards', 'human_obs']}
 
 class SegmentVideoRecorder(object):
     def __init__(self, predictor, env, save_dir, n_desired_videos_per_checkpoint=1, checkpoint_interval=10):
@@ -41,16 +43,16 @@ class SegmentVideoRecorder(object):
         self._counter = 0  # Internal counter of how many videos we've saved at a given iteration.
 
     def path_callback(self, path):
-        if self._num_paths_seen % self.checkpoint_interval == 0 and self._num_paths_seen != 0:
+        if self._num_paths_seen % self.checkpoint_interval == 0:  # and self._num_paths_seen != 0:
             if self._counter < self.n_desired_videos_per_checkpoint:
                 fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._num_paths_seen, self._counter)
                 print("Saving video of run %s_%s to %s" % (self._num_paths_seen, self._counter, fname))
-                full_run = sample_segment_from_path(path, len(path['obs']))
+                ep_length = get_timesteps_per_episode(self.env)
+                full_run = sample_segment_from_path(_slice_path(path, ep_length), ep_length)
                 write_segment_to_video(full_run, fname, self.env)
                 self._counter += 1
         else:
             self._counter = 0
-
         self._num_paths_seen += 1
         self.predictor.path_callback(path)
 
