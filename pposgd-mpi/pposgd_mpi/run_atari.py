@@ -1,22 +1,22 @@
 #!/usr/bin/env python
 from mpi4py import MPI
-from baselines.common import set_global_seeds
-from baselines import bench
-from baselines.common.mpi_fork import mpi_fork
+from pposgd_mpi.common import set_global_seeds
+from pposgd_mpi import bench
+from pposgd_mpi.common.mpi_fork import mpi_fork
 import os.path as osp
 import gym, logging
-from baselines import logger
+from pposgd_mpi import logger
 import sys
 
 def wrap_train(env):
-    from baselines.common.atari_wrappers import (wrap_deepmind, FrameStack)
+    from pposgd_mpi.common.atari_wrappers import (wrap_deepmind, FrameStack)
     env = wrap_deepmind(env, clip_rewards=True)
     env = FrameStack(env, 4)
     return env
 
 def train(env_id, num_timesteps, seed, num_cpu):
-    from baselines.pposgd import pposgd_simple, cnn_policy
-    import baselines.common.tf_util as U
+    from pposgd_mpi.pposgd import pposgd_simple, cnn_policy
+    import pposgd_mpi.common.tf_util as U
     whoami  = mpi_fork(num_cpu)
     if whoami == "parent": return
     rank = MPI.COMM_WORLD.Get_rank()
