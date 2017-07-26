@@ -104,9 +104,11 @@ def make_with_torque_removed(env_id):
     if '-v' in env_id:
         env_id = env_id[:env_id.index('-v')].lower()
     if env_id.startswith('short'):
-        env_id= env_id[len('short'):]
-
-    return task_by_name(env_id)  # Use our task_by_name function to get the env
+        env_id = env_id[len('short'):]
+        short = True
+    else:
+        short = False
+    return task_by_name(env_id, short)  # Use our task_by_name function to get the env
 
 def get_timesteps_per_episode(env):
     if hasattr(env, "_max_episode_steps"):
