@@ -185,8 +185,6 @@ def learn(env, policy_func, *,
         seg = seg_gen.__next__()
         add_vtarg_and_adv(seg, gamma, lam)
 
-
-
         # ob, ac, atarg, ret, td1ret = map(np.concatenate, (obs, acs, atargs, rets, td1rets))
         ob, ac, atarg, tdlamret = seg["obs"], seg["actions"], seg["adv"], seg["tdlamret"]
         vpredbefore = seg["vpred"] # predicted value function before update
