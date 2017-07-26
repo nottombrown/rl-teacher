@@ -8,7 +8,7 @@ from pposgd_mpi.common.mpi_moments import mpi_moments
 from mpi4py import MPI
 from collections import deque
 
-def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
+def traj_segment_generator(pi, env, steps_per_batch, stochastic, predictor=None):
     t = 0
     ac = env.action_space.sample() # not used, just so we have the datatype
     _ = env.reset()
@@ -21,12 +21,12 @@ def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
     ep_lens = [] # lengths of ...
 
     # Initialize history arrays
-    obs = np.array([ob for _ in range(horizon)])
-    human_obs = np.array([info.get("human_obs") for _ in range(horizon)])
-    rews = np.zeros(horizon, 'float32')
-    vpreds = np.zeros(horizon, 'float32')
-    news = np.zeros(horizon, 'int32')
-    acs = np.array([ac for _ in range(horizon)])
+    obs = np.array([ob for _ in range(steps_per_batch)])
+    human_obs = np.array([info.get("human_obs") for _ in range(steps_per_batch)])
+    rews = np.zeros(steps_per_batch, 'float32')
+    vpreds = np.zeros(steps_per_batch, 'float32')
+    news = np.zeros(steps_per_batch, 'int32')
+    acs = np.array([ac for _ in range(steps_per_batch)])
     prevacs = acs.copy()
 
     while True:
@@ -35,7 +35,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
         # Slight weirdness here because we need value function at time T
         # before returning segment [0, T-1] so we get the correct
         # terminal value
-        if t > 0 and t % horizon == 0:
+        if t > 0 and t % steps_per_batch == 0:
             path = {"obs" : obs, "rew" : rews, "vpred" : vpreds, "new" : news,
                     "actions" : acs, "prevac" : prevacs, "nextvpred": vpred * (1 - new),
                     "ep_rets" : ep_rets, "ep_lens" : ep_lens, "human_obs" : human_obs}
@@ -44,6 +44,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
             #  START REWARD MODIFICATIONS  #
             ################################
             if predictor:
+                # NB: Unlike TRPO, this generator returns several episodes concatenated together into one large path
                 path["original_rewards"] = path["rew"]
                 path["rew"] = predictor.predict_reward(path)
                 predictor.path_callback(path)
@@ -57,7 +58,7 @@ def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
             # several of these batches, then be sure to do a deepcopy
             ep_rets = []
             ep_lens = []
-        i = t % horizon
+        i = t % steps_per_batch
         obs[i] = ob
         human_obs[i] = info.get("human_obs")
         vpreds[i] = vpred
