@@ -49,49 +49,39 @@ class SegmentVideoRecorder(object):
                 self._counter += 1
         else:
             self._counter = 0
-        self.predictor.path_callback(path, iteration)
+
+        if hasattr(self.predictor, "path_callback"):
+            self.predictor.path_callback(path, iteration)
 
     def predict_reward(self, path):
         return self.predictor.predict_reward(path)
 
-class RandomRolloutSegmentCollector(object):
-    def __init__(self, n_desired_segments, fps):
-        self.n_desired_segments = n_desired_segments
-        self.fps = fps
-        self.segments = []
-
+class RandomRolloutPredictor(object):
     def predict_reward(self, path):
         epsilon = 1e-9  # Reward is unused during random rollout so we return a tiny value for each q_state
         return np.ones(len(path["obs"])) * epsilon
 
-    def path_callback(self, path, iteration):
-        clip_length_in_seconds = 1.5
-        segment = sample_segment_from_path(path, int(clip_length_in_seconds * self.fps))
-        if segment:
-            self.segments.append(segment)
-
-        if len(self.segments) % 10 == 0 and len(self.segments) > 0:
-            print("Collected %s/%s segments" % (len(self.segments), self.n_desired_segments))
-
-        if len(self.segments) >= self.n_desired_segments:
-            raise SuccessfullyCollectedSegments()
-
-class SuccessfullyCollectedSegments(Exception):
-    pass
-
-def segments_from_rand_rollout(seed, env_id, env, n_segments, workers=4):
-    collector = RandomRolloutSegmentCollector(n_segments, fps=env.fps)
+def segments_from_rand_rollout(seed, env_id, env, n_desired_segments, workers=4):
     max_timesteps_per_episode = get_timesteps_per_episode(env)
     timesteps_per_batch = 8000
-    try:
-        with tf.Graph().as_default():
-            rollouts = ParallelRollout(env_id, make_with_torque_removed, collector, workers, max_timesteps_per_episode, seed)
-            iteration = 0
-            while True:
-                iteration += 1
-                # run a bunch of async processes that collect rollouts
-                # Eventually this will cause an exception
-                rollouts.rollout(timesteps_per_batch, iteration)
-    except SuccessfullyCollectedSegments:
-        print("Successfully collected %s segments" % len(collector.segments))
-        return collector.segments
+    rollouts = ParallelRollout(
+        env_id, make_with_torque_removed, RandomRolloutPredictor(), workers, max_timesteps_per_episode, seed)
+    segments = []
+    iteration = 0
+    while len(segments) < n_desired_segments:
+        iteration += 1
+        # run a bunch of async processes that collect rollouts
+        paths, _ = rollouts.rollout(timesteps_per_batch, iteration)
+
+        for path in paths:
+            clip_length_in_seconds = 1.5
+            segment = sample_segment_from_path(path, int(clip_length_in_seconds * env.fps))
+            if segment:
+                segments.append(segment)
+
+            if len(segments) % 10 == 0 and len(segments) > 0:
+                print("Collected %s/%s segments" % (len(segments), n_desired_segments))
+
+    print("Successfully collected %s segments" % len(segments))
+    rollouts.end()
+    return segments
