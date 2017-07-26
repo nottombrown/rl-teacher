@@ -5,7 +5,7 @@ from pposgd_mpi import bench
 from pposgd_mpi.common.mpi_fork import mpi_fork
 import os.path as osp
 import gym, logging
-from pposgd_mpi import logger
+from pposgd_mpi.common import logger
 import sys
 
 def wrap_train(env):
@@ -15,7 +15,7 @@ def wrap_train(env):
     return env
 
 def train(env_id, num_timesteps, seed, num_cpu):
-    from pposgd_mpi.pposgd import pposgd_simple, cnn_policy
+    from pposgd_mpi import pposgd_simple, cnn_policy
     import pposgd_mpi.common.tf_util as U
     whoami  = mpi_fork(num_cpu)
     if whoami == "parent": return
