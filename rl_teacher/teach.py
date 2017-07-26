@@ -148,13 +148,14 @@ class ComparisonRewardPredictor(object):
         left_q_states = np.asarray([comp['left']['q_states'] for comp in labeled_comparisons])
         right_q_states = np.asarray([comp['right']['q_states'] for comp in labeled_comparisons])
 
-        _, loss = self.sess.run([self.train_op, self.loss_op], feed_dict={
-            self.segment_placeholder: left_q_states,
-            self.segment_alt_placeholder: right_q_states,
-            self.labels: np.asarray([comp['label'] for comp in labeled_comparisons]),
-            K.learning_phase(): True
-        })
-        self._write_training_summaries(loss)
+        with self.graph.as_default():
+            _, loss = self.sess.run([self.train_op, self.loss_op], feed_dict={
+                self.segment_placeholder: left_q_states,
+                self.segment_alt_placeholder: right_q_states,
+                self.labels: np.asarray([comp['label'] for comp in labeled_comparisons]),
+                K.learning_phase(): True
+            })
+            self._write_training_summaries(loss)
 
     def _write_training_summaries(self, loss):
         self.agent_logger.log_simple("predictor/loss", loss)
