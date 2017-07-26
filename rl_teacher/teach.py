@@ -34,7 +34,7 @@ class TraditionalRLRewardPredictor():
         self.agent_logger.log_episode(path)
         return path["original_rewards"]
 
-    def path_callback(self, path, iteration):
+    def path_callback(self, path):
         pass
 
 class ComparisonRewardPredictor():
@@ -113,7 +113,7 @@ class ComparisonRewardPredictor():
         })
         return q_state_reward_pred[0]
 
-    def path_callback(self, path, iteration):
+    def path_callback(self, path):
         path_length = len(path["obs"])
         self._steps_since_last_training += path_length
 
@@ -277,7 +277,7 @@ def main():
     elif args.agent == "pposgd_mpi":
         def make_env():
             return make_with_torque_removed(env_id)
-        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed)
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=wrapped_predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 

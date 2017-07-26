@@ -37,19 +37,21 @@ class SegmentVideoRecorder(object):
         self.checkpoint_interval = checkpoint_interval
         self.save_dir = save_dir
 
+        self._iteration = 0  # Internal counter of how many paths we've seen
         self._counter = 0  # Internal counter of how many videos we've saved at a given iteration.
 
-    def path_callback(self, path, iteration):
-        if iteration % self.checkpoint_interval == 0:
+    def path_callback(self, path):
+        if self._iteration % self.checkpoint_interval == 0:
             if self._counter < self.n_desired_videos_per_checkpoint:
-                fname = '%s/run_%s_%s.mp4' % (self.save_dir, iteration, self._counter)
-                print("Saving video of run %s_%s to %s" % (iteration, self._counter, fname))
+                fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._iteration, self._counter)
+                print("Saving video of run %s_%s to %s" % (self._iteration, self._counter, fname))
                 full_run = sample_segment_from_path(path, len(path['obs']))
                 write_segment_to_video(full_run, fname, self.env)
                 self._counter += 1
         else:
             self._counter = 0
-        self.predictor.path_callback(path, iteration)
+        self._iteration += 1
+        self.predictor.path_callback(path, self._iteration)
 
     def predict_reward(self, path):
         return self.predictor.predict_reward(path)
