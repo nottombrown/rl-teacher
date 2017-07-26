@@ -7,7 +7,7 @@ from pposgd_mpi import bench
 from pposgd_mpi.common import logger
 from pposgd_mpi.common import set_global_seeds, tf_util as U
 
-def train(env_id, num_timesteps, seed):
+def train_pposgd_mpi(env_id, num_timesteps, seed):
     from pposgd_mpi import mlp_policy, pposgd_simple
     U.make_session(num_cpu=1).__enter__()
     logger.session().__enter__()
@@ -31,7 +31,7 @@ def train(env_id, num_timesteps, seed):
     env.close()
 
 def main():
-    train('Hopper-v1', num_timesteps=1e6, seed=0)
+    train_pposgd_mpi('Hopper-v1', num_timesteps=1e6, seed=0)
 
 if __name__ == '__main__':
     main()

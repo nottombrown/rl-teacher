@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from parallel_trpo.train import train_parallel
+from parallel_trpo.train import train_parallel_trpo
 
 from rl_teacher.envs import get_timesteps_per_episode, make_with_torque_removed
 from rl_teacher.video import write_segment_to_video
@@ -83,7 +83,7 @@ def segments_from_rand_rollout(seed, env_id, env, n_segments):
     collector = RandomRolloutSegmentCollector(n_segments, fps=env.fps)
     try:
         with tf.Graph().as_default():
-            train_parallel(
+            train_parallel_trpo(
                 env_id=env_id,
                 make_env=make_with_torque_removed,
                 predictor=collector,
