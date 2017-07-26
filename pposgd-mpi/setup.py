@@ -17,7 +17,6 @@ setup(name='pposgd_mpi',
         'joblib',
         'zmq',
         'dill',
-        'azure==1.0.3',
         'progressbar2',
         'mpi4py ~= 2.0.0'
     ],
