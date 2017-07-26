@@ -275,10 +275,9 @@ def main():
             seed=args.seed,
         )
     elif args.agent == "pposgd_mpi":
-        def make_env(env_id):
-            import gym
-            return gym.make(env_id)
-        train_pposgd_mpi(make_env, num_timesteps=1e6, seed=0)
+        def make_env():
+            return make_with_torque_removed(env_id)
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 
