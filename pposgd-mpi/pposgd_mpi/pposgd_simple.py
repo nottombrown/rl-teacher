@@ -40,7 +40,6 @@ def traj_segment_generator(pi, env, horizon, stochastic, predictor=None):
                     "actions" : acs, "prevac" : prevacs, "nextvpred": vpred * (1 - new),
                     "ep_rets" : ep_rets, "ep_lens" : ep_lens, "human_obs" : human_obs}
 
-
             ################################
             #  START REWARD MODIFICATIONS  #
             ################################
