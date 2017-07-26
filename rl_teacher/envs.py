@@ -2,6 +2,7 @@ from copy import copy
 
 import gym
 import numpy as np
+import scipy.misc as misc
 from gym.envs import mujoco
 from gym.wrappers.time_limit import TimeLimit
 
@@ -64,6 +65,30 @@ class PixelEnvViewer(TransparentWrapper):
             info["human_obs"] = ob
         return ob, reward, done, info
 
+class CompressedPixelViewer(TransparentWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self.observation_space = np.eye(84)  # HACK: This is just so the .shape == (84,84)
+
+    def _rgb2gray(self, rgb):
+        return np.dot(rgb[..., :3], [0.299, 0.587, 0.114])
+
+    def _preprocess(self, image):
+        image = self._rgb2gray(image)
+        image = misc.imresize(image, [84, 84], 'bilinear')
+        image = image.astype(np.float32) / 128.0 - 1.0
+        return image
+
+    def _reset(self):
+        ob = self.env.reset()
+        ob = self._preprocess(ob)
+        return ob
+
+    def _step(self, a):
+        ob, reward, done, info = self.env._step(a)
+        ob = self._preprocess(ob)
+        return ob, reward, done, info
+
 class UseReward(TransparentWrapper):
     """Use a reward other than the normal one for an environment.
      We do this because humans cannot see torque penalties
@@ -121,8 +146,9 @@ def task_by_name(name, original_name=None, short=False):
             # If an original_name is provided, try to make an environment from that.
             # See "make_with_torque_removed"
             env = gym.make(original_name)
+            env = CompressedPixelViewer(env)
             env = PixelEnvViewer(env, flip=True, fps=30)
-            env = limit(t=2000, env=env)
+            env = limit(t=500, env=env)
             return env
         except Exception:
             raise ValueError(name)

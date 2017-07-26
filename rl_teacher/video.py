@@ -21,11 +21,17 @@ def export_video(frames, fname, fps=10):
 
     raw_image = isinstance(frames[0], tuple)
     shape = frames[0][0] if raw_image else frames[0].shape
+    greyscale = (len(shape) == 2)
+    if greyscale:  # Greyscale
+        shape = shape + (3,)
     encoder = ImageEncoder(fname, shape, fps)
     for frame in frames:
         if raw_image:
             encoder.proc.stdin.write(frame[1])
         else:
+            if greyscale:
+                # Convert cells of domain [-1, 1) to triplets of range [0, 256)
+                frame = np.transpose(np.tile((frame + 1) * 128, (3, 1, 1)), (1, 2, 0)).astype(np.uint8)
             encoder.capture_frame(frame)
     encoder.close()
 
