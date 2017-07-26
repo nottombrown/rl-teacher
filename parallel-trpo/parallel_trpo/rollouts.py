@@ -1,5 +1,6 @@
+import os
 import multiprocess
-from time import clock as time
+from time import time
 from time import sleep
 
 import numpy as np
@@ -74,7 +75,7 @@ class Actor(multiprocess.Process):
                 self.task_q.task_done()
                 self.result_q.put(path)
             elif next_task == "kill":
-                print("Received kill message. Shutting down...")
+                print("Received kill message for rollout process. Shutting down...")
                 self.task_q.task_done()
                 break
             else:
@@ -109,7 +110,7 @@ class Actor(multiprocess.Process):
 
             if done or i == self.max_timesteps_per_episode - 2:
                 path = {
-                    "obs": np.concatenate(np.expand_dims(obs, 0)),
+                    "obs": np.array(obs),
                     "avg_action_dist": np.concatenate(avg_action_dists),
                     "logstd_action_dist": np.concatenate(logstd_action_dists),
                     "rewards": np.array(rewards),
@@ -119,6 +120,13 @@ class Actor(multiprocess.Process):
 
 class ParallelRollout(object):
     def __init__(self, env_id, make_env, reward_predictor, num_workers, max_timesteps_per_episode, seed):
+        # Tensorflow is not fork-safe, so we must use spawn instead
+        # https://github.com/tensorflow/tensorflow/issues/5448#issuecomment-258934405
+        # We use multiprocess rather than multiprocessing because Keras sets a multiprocessing context
+        if not os.environ.get("SET_PARALLEL_TRPO_START_METHOD"):  # Use an env variable to prevent double-setting
+            multiprocess.set_start_method('spawn')
+            os.environ['SET_PARALLEL_TRPO_START_METHOD'] = "1"
+
         self.num_workers = num_workers
         self.predictor = reward_predictor
 
@@ -139,6 +147,7 @@ class ParallelRollout(object):
     def rollout(self, timesteps, iteration):
         start_time = time()
         # keep 20,000 timesteps per update  TODO OLD
+        # TODO Run by number of rollouts rather than time
         num_rollouts = int(timesteps / self.average_timesteps_in_episode)
 
         for _ in range(num_rollouts):

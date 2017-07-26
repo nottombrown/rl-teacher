@@ -1,7 +1,4 @@
-import os
-
-import multiprocess
-from time import clock as time
+from time import time
 
 import tensorflow as tf
 import numpy as np
@@ -39,13 +36,6 @@ def train_parallel(
         discount_factor=0.995,
         cg_damping=0.1,
 ):
-    # Tensorflow is not fork-safe, so we must use spawn instead
-    # https://github.com/tensorflow/tensorflow/issues/5448#issuecomment-258934405
-    # We use multiprocess rather than multiprocessing because Keras sets a multiprocessing context
-    if not os.environ.get("SET_PARALLEL_TRPO_START_METHOD"):  # Use an env variable to prevent double-setting
-        multiprocess.set_start_method('spawn')
-        os.environ['SET_PARALLEL_TRPO_START_METHOD'] = "1"
-
     run_indefinitely = (runtime <= 0)
 
     if max_timesteps_per_episode is None:

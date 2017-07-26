@@ -1,6 +1,6 @@
 import multiprocessing
 from collections import OrderedDict
-from time import clock as time
+from time import time
 
 import numpy as np
 import tensorflow as tf
