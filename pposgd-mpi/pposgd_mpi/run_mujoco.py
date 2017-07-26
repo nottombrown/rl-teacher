@@ -7,12 +7,12 @@ from pposgd_mpi import bench
 from pposgd_mpi.common import logger
 from pposgd_mpi.common import set_global_seeds, tf_util as U
 
-def train_pposgd_mpi(env_id, num_timesteps, seed):
+def train_pposgd_mpi(make_env, num_timesteps, seed):
     from pposgd_mpi import mlp_policy, pposgd_simple
     U.make_session(num_cpu=1).__enter__()
     logger.session().__enter__()
     set_global_seeds(seed)
-    env = gym.make(env_id)
+    env = make_env()
 
     def policy_fn(name, ob_space, ac_space):
         return mlp_policy.MlpPolicy(name=name, ob_space=ob_space, ac_space=ac_space,
@@ -31,7 +31,10 @@ def train_pposgd_mpi(env_id, num_timesteps, seed):
     env.close()
 
 def main():
-    train_pposgd_mpi('Hopper-v1', num_timesteps=1e6, seed=0)
+    def make_env():
+        return gym.make('Hopper-v1')
+
+    train_pposgd_mpi(make_env, num_timesteps=1e6, seed=0)
 
 if __name__ == '__main__':
     main()
