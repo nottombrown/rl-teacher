@@ -25,7 +25,7 @@ from rl_teacher.utils import slugify
 
 CLIP_LENGTH = 1.5
 
-class TraditionalRLRewardPredictor():
+class TraditionalRLRewardPredictor(object):
     """Predictor that always returns the true reward provided by the environment."""
 
     def __init__(self, summary_writer):
@@ -35,7 +35,7 @@ class TraditionalRLRewardPredictor():
         # self.agent_logger.log_episode(path)  <-- This causes problems for GA3C
         return path["original_rewards"]
 
-class ComparisonRewardPredictor():
+class ComparisonRewardPredictor(object):
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
 
     def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule):
@@ -51,9 +51,13 @@ class ComparisonRewardPredictor():
         self._n_paths_per_predictor_training = 1e2  # How often should we train our predictor?
 
         # Build and initialize our predictor model
-        self.sess = tf.InteractiveSession()
-        self.q_state_size = np.product(env.observation_space.shape) + np.product(env.action_space.shape)
-        self._build_model()
+        config = tf.ConfigProto(
+            device_count={'GPU': 0}
+        )
+        self.sess = tf.InteractiveSession(config=config)
+        action_size = np.product(env.action_space.shape) if hasattr(env.action_space, "shape") else env.action_space.n
+        self.q_state_size = np.product(env.observation_space.shape) + action_size
+        self.graph = self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
     def _predict_reward_Ds(self, segments_Ds):
@@ -99,12 +103,15 @@ class ComparisonRewardPredictor():
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss_op, global_step=self.global_step)
 
+        return tf.get_default_graph()
+
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
-        reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
-            self.segment_placeholder_Ds: np.array([create_segment_q_states(path)]),
-            K.learning_phase(): False
-        })
+        with self.graph.as_default():
+            reward_pred_Ds = self.sess.run(self.q_state_reward_pred_Ds, feed_dict={
+                self.segment_placeholder_Ds: np.array([create_segment_q_states(path)]),
+                K.learning_phase(): False
+            })
         return reward_pred_Ds[0]
 
     def path_callback(self, path, iteration):
@@ -220,7 +227,7 @@ def main():
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
         pretrain_segments = segments_from_rand_rollout(
-            args.seed, env_id, env, n_segments=pretrain_labels * 5, workers=args.workers)
+            args.seed, env_id, env, n_desired_segments=pretrain_labels * 5, workers=args.workers)
 
         # Pull in our pret  raining segments
         while len(comparison_collector) < int(pretrain_labels):  # Turn our segments into comparisons
@@ -257,6 +264,9 @@ def main():
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
     print("Starting joint training of predictor and agent")
     if args.agent == "ga3c":
+        from multiprocessing import Queue
+        wrapped_predictor.queue = Queue(100)
+
         Ga3cConfig.ATARI_GAME = env
         Ga3cConfig.REWARD_MODIFIER = wrapped_predictor
         Ga3cServer().main()

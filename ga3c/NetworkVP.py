@@ -157,7 +157,6 @@ class NetworkVP:
             else:
                 self.train_op = self.opt.minimize(self.cost_all, global_step=self.global_step)
 
-
     def _create_tensor_board(self):
         summaries = tf.get_collection(tf.GraphKeys.SUMMARIES)
         summaries.append(tf.summary.scalar("Pcost_advantage", self.cost_p_1_agg))

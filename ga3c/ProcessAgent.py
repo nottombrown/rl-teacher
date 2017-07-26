@@ -48,6 +48,8 @@ class ProcessAgent(Process):
         self.num_actions = self.env.get_num_actions()
         self.actions = np.arange(self.num_actions)
 
+        self._action_onehots = np.eye(self.num_actions)
+
         self.discount_factor = Config.DISCOUNT
         # one frame at a time
         self.wait_q = Queue(maxsize=1)
@@ -124,30 +126,23 @@ class ProcessAgent(Process):
                         new_experiences = experiences[1:]
                     else:
                         new_experiences = experiences
-                    path["obs"] += [e.state for e in new_experiences]
+                    # Ironically we actually want to use the human_obs here
+                    # because GA3C uses a 4-frame stack while Teacher learns off only one frame
+                    path["obs"] += [e.human_obs for e in new_experiences]
                     path["original_rewards"] += [e.reward for e in new_experiences]
-                    path["action"] += [e.action for e in new_experiences]
+                    path["action"] += [self._action_onehots[e.action] for e in new_experiences]
                     path["human_obs"] += [e.human_obs for e in new_experiences]
 
                     # Note: This "prediction" is a different kind than is used in A3C.
                     # This is prediction by RL-Teacher of the "true" reward known by a human.
                     #  TODO SPEED UP!! THIS IS SLOWING THINGS DOWN! BECAUSE IT'S OPERATING ON THE WHOLE PATH!
-                    path["rewards"] = Config.REWARD_MODIFIER.predict_reward(path)
-                    if done and self.id == 1:
-                        # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
-                        if hasattr(Config.REWARD_MODIFIER, 'path_callback'):
-                            Config.REWARD_MODIFIER.path_callback(path, iteration)
+                    Config.REWARD_MODIFIER.queue.put((self.id, done, path, iteration))
+                    path["rewards"] = self.wait_q.get()
 
                     # Translate new rewards back into the experiences
                     for i in range(len(experiences)):
                         # Work backwards because the path is longer than the experience list, but their ends are synced
-                        experiences[-(1+i)].reward = path["rewards"][-(1+i)]
-                if sum([o - e.reward for o,e in zip(original_rewards, experiences)]) != 0:
-                    print(original_rewards)
-                    print([e.reward for e in experiences])
-                    print(sum([o - e.reward for o,e in zip(original_rewards, experiences)]))
-                    print(path["rewards"])
-                    raise Exception("WTF")
+                        experiences[-(1 + i)].reward = path["rewards"][-(1 + i)]
                 ################################
                 #   END REWARD MODIFICATIONS   #
                 ################################
