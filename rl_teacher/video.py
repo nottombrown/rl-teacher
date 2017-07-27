@@ -4,6 +4,8 @@ import os
 import os.path as osp
 import subprocess
 
+from rl_teacher.segment_sampling import sample_segment_from_path
+
 import numpy as np
 from gym import error
 
