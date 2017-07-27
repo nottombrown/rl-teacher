@@ -283,7 +283,7 @@ def main():
 
         # Pull in our pretraining segments
         for i in range(pretrain_labels):  # Turn our segments into comparisons
-            comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + len(pretrain_labels)])
+            comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
 
         # Sleep until the human has labeled most of the pretraining comparisons
         while len(comparison_collector.labeled_comparisons) < int(pretrain_labels * 0.75):
