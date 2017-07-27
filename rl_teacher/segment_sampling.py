@@ -54,39 +54,39 @@ def do_rollout(env, action_function):
         "human_obs": np.array(human_obs)}
     return path
 
-def segments_from_rand_rollout(
-    env_id, make_env, n_desired_segments,
-    clip_length_in_seconds, workers,
-    # These are only for internal recursion
+def basic_segments_from_rand_rollout(
+    env_id, make_env, n_desired_segments, clip_length_in_seconds,
+    # These are only for use with multiprocessing
     _verbose=True, _multiplier=1
 ):
-    if workers > 1:  # Multiprocessing
-        pool = Pool(processes=workers)
-        segments_per_worker = int(math.ceil(n_desired_segments / workers))
-        # One job per worker
-        # Only worker 1 is verbose
-        jobs = [(env_id, make_env, segments_per_worker, clip_length_in_seconds, 1, i == 0, workers) for i in range(workers)]
-        results = pool.starmap(segments_from_rand_rollout, jobs)
-        pool.close()
-        return [segment for sublist in results for segment in sublist]
+    segments = []
+    env = make_env(env_id)
+    segment_length = int(clip_length_in_seconds * env.fps)
+    while len(segments) < n_desired_segments:
+        path = do_rollout(env, random_action)
+        # Calculate the number of segments to sample from the path
+        # Such that the probability of sampling the same part twice is fairly low.
+        segments_for_this_path = max(1, int(0.25 * len(path['obs']) / segment_length))
+        for _ in range(segments_for_this_path):
+            segment = sample_segment_from_path(path, segment_length)
+            if segment:
+                segments.append(segment)
 
-    else:  # Single process
-        segments = []
-        env = make_env(env_id)
-        segment_length = int(clip_length_in_seconds * env.fps)
-        while len(segments) < n_desired_segments:
-            path = do_rollout(env, random_action)
-            # Calculate the number of segments to sample from the path
-            # Such that the probability of sampling the same part twice is fairly low.
-            segments_for_this_path = max(1, int(0.25 * len(path['obs']) / segment_length))
-            for _ in range(segments_for_this_path):
-                segment = sample_segment_from_path(path, segment_length)
-                if segment:
-                    segments.append(segment)
+            if _verbose and len(segments) % 10 == 0 and len(segments) > 0:
+                print("Collected %s/%s segments" % (len(segments) * _multiplier, n_desired_segments * _multiplier))
 
-                if _verbose and len(segments) % 10 == 0 and len(segments) > 0:
-                    print("Collected %s/%s segments" % (len(segments) * _multiplier, n_desired_segments * _multiplier))
+    if _verbose:
+        print("Successfully collected %s segments" % (len(segments) * _multiplier))
+    return segments
 
-        if _verbose:
-            print("Successfully collected %s segments" % (len(segments) * _multiplier))
-        return segments
+def segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds, workers):
+    if workers < 2:  # Default to basic segment collection
+        return basic_segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds)
+
+    pool = Pool(processes=workers)
+    segments_per_worker = int(math.ceil(n_desired_segments / workers))
+    # One job per worker. Only the first worker is verbose.
+    jobs = [(env_id, make_env, segments_per_worker, clip_length_in_seconds, i == 0, workers) for i in range(workers)]
+    results = pool.starmap(basic_segments_from_rand_rollout, jobs)
+    pool.close()
+    return [segment for sublist in results for segment in sublist]
