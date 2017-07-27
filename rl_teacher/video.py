@@ -7,6 +7,31 @@ import subprocess
 import numpy as np
 from gym import error
 
+class SegmentVideoRecorder(object):
+    def __init__(self, predictor, env, save_dir, n_desired_videos_per_checkpoint=1, checkpoint_interval=10):
+        self.predictor = predictor
+        self.env = env
+        self.n_desired_videos_per_checkpoint = n_desired_videos_per_checkpoint
+        self.checkpoint_interval = checkpoint_interval
+        self.save_dir = save_dir
+
+        self._counter = 0  # Internal counter of how many videos we've saved at a given iteration.
+
+    def path_callback(self, path, iteration):
+        if iteration % self.checkpoint_interval == 0:
+            if self._counter < self.n_desired_videos_per_checkpoint:
+                fname = '%s/run_%s_%s.mp4' % (self.save_dir, iteration, self._counter)
+                print("Saving video of run %s_%s to %s" % (iteration, self._counter, fname))
+                full_run = sample_segment_from_path(path, len(path['obs']))
+                write_segment_to_video(full_run, fname, self.env)
+                self._counter += 1
+        else:
+            self._counter = 0
+        self.predictor.path_callback(path, iteration)
+
+    def predict_reward(self, path):
+        return self.predictor.predict_reward(path)
+
 def write_segment_to_video(segment, fname, env):
     os.makedirs(osp.dirname(fname), exist_ok=True)
     frames = [env.render_full_obs(x) for x in segment["human_obs"]]

@@ -14,7 +14,7 @@ from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.label_schedules import LabelAnnealer, ConstantLabelSchedule
 from rl_teacher.nn import FullyConnectedMLP
-from rl_teacher.segment_sampling import SegmentVideoRecorder
+from rl_teacher.video import SegmentVideoRecorder
 from rl_teacher.segment_sampling import create_segment_q_states
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.segment_sampling import segments_from_rand_rollout
