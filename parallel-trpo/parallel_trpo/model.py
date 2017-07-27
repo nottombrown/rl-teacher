@@ -116,7 +116,7 @@ class TRPO(object):
         avg_action_dist = np.concatenate([path["avg_action_dist"] for path in paths])
         logstd_action_dist = np.concatenate([path["logstd_action_dist"] for path in paths])
         obs_n = np.concatenate([path["obs"] for path in paths])
-        action_n = np.concatenate([path["action"] for path in paths])
+        action_n = np.concatenate([path["actions"] for path in paths])
 
         # standardize to mean 0 stddev 1
         advant_n = np.concatenate([path["advantage"] for path in paths])
