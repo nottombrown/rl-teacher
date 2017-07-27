@@ -220,7 +220,8 @@ def main():
             label_schedule = ConstantLabelSchedule(pretrain_labels=pretrain_labels)
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
-        pretrain_segments = segments_from_rand_rollout(args.seed, env_id, env, n_segments=pretrain_labels * 5)
+        pretrain_segments = segments_from_rand_rollout(
+            env, n_desired_segments=pretrain_labels * 5, clip_length_in_seconds=CLIP_LENGTH)
 
         # Pull in our pretraining segments
         while len(comparison_collector) < int(pretrain_labels):  # Turn our segments into comparisons
