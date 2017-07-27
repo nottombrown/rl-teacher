@@ -48,8 +48,6 @@ class ProcessAgent(Process):
         self.num_actions = self.env.get_num_actions()
         self.actions = np.arange(self.num_actions)
 
-        self._action_onehots = np.eye(self.num_actions)
-
         self.discount_factor = Config.DISCOUNT
         # one frame at a time
         self.wait_q = Queue(maxsize=1)
@@ -58,7 +56,7 @@ class ProcessAgent(Process):
     @staticmethod
     def _accumulate_rewards(experiences, discount_factor, terminal_reward):
         reward_sum = terminal_reward
-        for t in reversed(range(0, len(experiences)-1)):
+        for t in reversed(range(0, len(experiences) - 1)):
             r = np.clip(experiences[t].reward, Config.REWARD_MIN, Config.REWARD_MAX)
             reward_sum = discount_factor * reward_sum + r
             experiences[t].reward = reward_sum
@@ -130,7 +128,7 @@ class ProcessAgent(Process):
                     # because GA3C uses a 4-frame stack while Teacher learns off only one frame
                     path["obs"] += [e.human_obs for e in new_experiences]
                     path["original_rewards"] += [e.reward for e in new_experiences]
-                    path["actions"] += [self._action_onehots[e.action] for e in new_experiences]
+                    path["actions"] += [e.action for e in new_experiences]
                     path["human_obs"] += [e.human_obs for e in new_experiences]
 
                     # Note: This "prediction" is a different kind than is used in A3C.

@@ -55,7 +55,8 @@ class ComparisonRewardPredictor(object):
         )
         self.sess = tf.InteractiveSession(config=config)
         self.obs_shape = env.observation_space.shape
-        self.act_shape = env.action_space.shape if hasattr(env.action_space, "shape") else (env.action_space.n,)
+        self.discrete_action_space = not hasattr(env.action_space, "shape")
+        self.act_shape = (env.action_space.n,) if self.discrete_action_space else env.action_space.shape
         self.graph = self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
@@ -87,22 +88,35 @@ class ComparisonRewardPredictor(object):
         of which segment is better. We then learn the weights for our model by comparing
         these labels with an authority (either a human or synthetic labeler).
         """
+        # Set up observation placeholders
         self.segment_obs_placeholder = tf.placeholder(
             dtype=tf.float32, shape=(None, None) + self.obs_shape, name="obs_placeholder")
         self.segment_alt_obs_placeholder = tf.placeholder(
             dtype=tf.float32, shape=(None, None) + self.obs_shape, name="alt_obs_placeholder")
-        self.segment_act_placeholder = tf.placeholder(
-            dtype=tf.float32, shape=(None, None) + self.act_shape, name="act_placeholder")
-        self.segment_alt_act_placeholder = tf.placeholder(
-            dtype=tf.float32, shape=(None, None) + self.act_shape, name="alt_act_placeholder")
+
+        # Set up action placeholders
+        if self.discrete_action_space:
+            self.segment_act_placeholder = tf.placeholder(
+                dtype=tf.float32, shape=(None, None), name="act_placeholder")
+            self.segment_alt_act_placeholder = tf.placeholder(
+                dtype=tf.float32, shape=(None, None), name="alt_act_placeholder")
+            # Discrete actions need to become one-hot vectors for the model
+            segment_act = tf.one_hot(tf.cast(self.segment_act_placeholder, tf.int32), self.act_shape[0])
+            segment_alt_act = tf.one_hot(tf.cast(self.segment_alt_act_placeholder, tf.int32), self.act_shape[0])
+        else:
+            self.segment_act_placeholder = tf.placeholder(
+                dtype=tf.float32, shape=(None, None) + self.act_shape, name="act_placeholder")
+            self.segment_alt_act_placeholder = tf.placeholder(
+                dtype=tf.float32, shape=(None, None) + self.act_shape, name="alt_act_placeholder")
+            # Assume the actions are how we want them
+            segment_act = self.segment_act_placeholder
+            segement_alt_act = self.segment_alt_act_placeholder
 
         # A vanilla multi-layer perceptron maps a (state, action) pair to a reward (Q-value)
         mlp = FullyConnectedMLP(self.obs_shape, self.act_shape)
 
-        self.q_value = self._predict_rewards(
-            self.segment_obs_placeholder, self.segment_act_placeholder, mlp)
-        alt_q_value = self._predict_rewards(
-            self.segment_alt_obs_placeholder, self.segment_alt_act_placeholder, mlp)
+        self.q_value = self._predict_rewards(self.segment_obs_placeholder, segment_act, mlp)
+        alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, segment_alt_act, mlp)
 
         # We use trajectory segments rather than individual (state, action) pairs because
         # video clips of segments are easier for humans to evaluate
@@ -299,6 +313,7 @@ def main():
         wrapped_predictor.queue = Queue(100)
 
         Ga3cConfig.ATARI_GAME = env
+        Ga3cConfig.AGENTS = args.workers
         Ga3cConfig.REWARD_MODIFIER = wrapped_predictor
         Ga3cServer().main()
     elif args.agent == "parallel_trpo":

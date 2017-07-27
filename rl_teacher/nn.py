@@ -22,5 +22,17 @@ class FullyConnectedMLP(object):
         self.model.add(Dense(1))
 
     def run(self, obs, act):
-        x = tf.concat([obs, act], axis=1)
+        flat_obs = tf.contrib.layers.flatten(obs)
+        x = tf.concat([flat_obs, act], axis=1)
         return self.model(x)
+
+class SimpleConvolveObservationQNet(object):
+    """
+    Network that has two convolution steps on the observation space before flattening,
+    concatinating the action and being an MLP."""
+
+    def __init__(self, obs_shape, act_shape, h_size=64):
+        pass
+
+    def run(self, obs, act):
+        pass
