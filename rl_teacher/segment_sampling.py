@@ -59,6 +59,7 @@ def basic_segments_from_rand_rollout(
     # These are only for use with multiprocessing
     _verbose=True, _multiplier=1
 ):
+    """ Generate a list of path segments by doing random rollouts. No multiprocessing. """
     segments = []
     env = make_env(env_id)
     segment_length = int(clip_length_in_seconds * env.fps)
@@ -80,6 +81,7 @@ def basic_segments_from_rand_rollout(
     return segments
 
 def segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds, workers):
+    """ Generate a list of path segments by doing random rollouts. Can use multiple processes. """
     if workers < 2:  # Default to basic segment collection
         return basic_segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds)
 
