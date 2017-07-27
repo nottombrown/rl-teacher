@@ -7,7 +7,7 @@ from rl_teacher.video import write_segment_to_video
 
 def create_segment_q_states(segment):
     obs_Ds = np.reshape(segment["obs"], (len(segment["obs"]), -1))  # Flatten observation space
-    act_Ds = np.reshape(segment["action"], (len(segment["action"]), -1))  # Flatten action space
+    act_Ds = np.reshape(segment["actions"], (len(segment["actions"]), -1))  # Flatten action space
     return np.concatenate([obs_Ds, act_Ds], axis=1)
 
 def sample_segment_from_path(path, segment_length):
@@ -23,7 +23,7 @@ def sample_segment_from_path(path, segment_length):
     segment = {
         k: np.asarray(v[start_pos:(start_pos + segment_length)])
         for k, v in path.items()
-        if k in ['obs', 'action', 'original_rewards', 'human_obs']}
+        if k in ['obs', 'actions', 'original_rewards', 'human_obs']}
 
     # Add q_states
     segment['q_states'] = create_segment_q_states(segment)

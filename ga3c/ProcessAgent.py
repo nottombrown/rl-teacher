@@ -92,7 +92,7 @@ class ProcessAgent(Process):
         path = {
             "obs": [],
             "original_rewards": [],
-            "action": [],
+            "actions": [],
             "human_obs": [],
         }
 
@@ -130,7 +130,7 @@ class ProcessAgent(Process):
                     # because GA3C uses a 4-frame stack while Teacher learns off only one frame
                     path["obs"] += [e.human_obs for e in new_experiences]
                     path["original_rewards"] += [e.reward for e in new_experiences]
-                    path["action"] += [self._action_onehots[e.action] for e in new_experiences]
+                    path["actions"] += [self._action_onehots[e.action] for e in new_experiences]
                     path["human_obs"] += [e.human_obs for e in new_experiences]
 
                     # Note: This "prediction" is a different kind than is used in A3C.
