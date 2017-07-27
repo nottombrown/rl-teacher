@@ -221,7 +221,8 @@ def main():
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
         pretrain_segments = segments_from_rand_rollout(
-            env, n_desired_segments=pretrain_labels * 5, clip_length_in_seconds=CLIP_LENGTH)
+            env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 5,
+            clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
 
         # Pull in our pretraining segments
         while len(comparison_collector) < int(pretrain_labels):  # Turn our segments into comparisons
