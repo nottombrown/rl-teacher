@@ -4,11 +4,6 @@ import numpy as np
 
 from rl_teacher.envs import get_timesteps_per_episode
 
-def create_segment_q_states(segment):
-    obs_Ds = np.reshape(segment["obs"], (len(segment["obs"]), -1))  # Flatten observation space
-    act_Ds = np.reshape(segment["actions"], (len(segment["actions"]), -1))  # Flatten action space
-    return np.concatenate([obs_Ds, act_Ds], axis=1)
-
 def sample_segment_from_path(path, segment_length):
     """Returns a segment sampled from a random place in a path. Returns None if the path is too short"""
     path_length = len(path["obs"])
@@ -23,8 +18,6 @@ def sample_segment_from_path(path, segment_length):
         for k, v in path.items()
         if k in ["obs", "actions", "original_rewards", "human_obs"]}
 
-    # Add q_states
-    segment["q_states"] = create_segment_q_states(segment)
     return segment
 
 def random_action(env, ob):
