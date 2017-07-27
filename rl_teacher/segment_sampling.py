@@ -11,7 +11,7 @@ def create_segment_q_states(segment):
 
 def sample_segment_from_path(path, segment_length):
     """Returns a segment sampled from a random place in a path. Returns None if the path is too short"""
-    path_length = len(path['obs'])
+    path_length = len(path["obs"])
     if path_length < segment_length:
         return None
 
@@ -21,10 +21,10 @@ def sample_segment_from_path(path, segment_length):
     segment = {
         k: np.asarray(v[start_pos:(start_pos + segment_length)])
         for k, v in path.items()
-        if k in ['obs', 'actions', 'original_rewards', 'human_obs']}
+        if k in ["obs", "actions", "original_rewards", "human_obs"]}
 
     # Add q_states
-    segment['q_states'] = create_segment_q_states(segment)
+    segment["q_states"] = create_segment_q_states(segment)
     return segment
 
 def random_action(env, ob):
@@ -66,7 +66,7 @@ def basic_segments_from_rand_rollout(
         path = do_rollout(env, random_action)
         # Calculate the number of segments to sample from the path
         # Such that the probability of sampling the same part twice is fairly low.
-        segments_for_this_path = max(1, int(0.25 * len(path['obs']) / segment_length))
+        segments_for_this_path = max(1, int(0.25 * len(path["obs"]) / segment_length))
         for _ in range(segments_for_this_path):
             segment = sample_segment_from_path(path, segment_length)
             if segment:
