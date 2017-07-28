@@ -51,8 +51,8 @@ Then run the following to install the rl-teacher code into your conda environmen
     cd ~/rl-teacher
     pip install -e .
     pip install -e human-feedback-api
-    pip install -e parallel-trpo[tf]
-
+    pip install -e agents/parallel-trpo[tf]
+    pip install -e agents/pposgd-mpi[tf]
 
 # Usage
 ## Baseline RL
