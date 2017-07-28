@@ -1,7 +1,7 @@
 import argparse
 import time
 
-from parallel_trpo.train import train_parallel
+from parallel_trpo.train import train_parallel_trpo
 
 from rl_teacher.summaries import make_summary_writer
 
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     summary_writer = make_summary_writer(run_name)
 
-    train_parallel(
+    train_parallel_trpo(
         env_id=args.env_id,
         run_name=args.run_name,
         predictor=TraditionalRLRewardPredictor(),

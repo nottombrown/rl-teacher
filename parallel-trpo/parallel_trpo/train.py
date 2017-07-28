@@ -25,7 +25,7 @@ def print_stats(stats):
 
         print("{:38} {:>12}".format(k + ":", v))
 
-def train_parallel(
+def train_parallel_trpo(
         env_id,
         predictor,
         make_env=gym.make,
