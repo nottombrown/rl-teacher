@@ -1,3 +1,4 @@
+from copy import deepcopy
 import os.path as osp
 from collections import deque
 
@@ -13,6 +14,15 @@ def make_summary_writer(name):
 def add_simple_summary(summary_writer, tag, simple_value, step):
     summary_writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=simple_value)]), step)
 
+def _pad_with_end_state(path, desired_length):
+    # Assume path length is at least 1.
+    if len(path["obs"]) >= desired_length:
+        return path
+    path = deepcopy(path)
+    for k, v in path:
+        path[k] += [v[-1] for _ in range(desired_length - len(v))]
+    return path
+
 class AgentLogger(object):
     """Tracks the performance of an arbitrary agent"""
 
@@ -26,6 +36,14 @@ class AgentLogger(object):
         n = 100
         self.last_n_paths = deque(maxlen=n)
         self.summary_writer = summary_writer
+
+    def get_recent_paths_with_padding(self):
+        """
+        Returns the last_n_paths, but with short paths being padded out so the result
+        can safely be made into an array.
+        """
+        max_len = max([len(path["obs"]) for path in self.last_n_paths])
+        return [_pad_with_end_state(path, max_len) for path in self.last_n_paths]
 
     def log_episode(self, path):
         self._timesteps_elapsed += len(path["obs"])
