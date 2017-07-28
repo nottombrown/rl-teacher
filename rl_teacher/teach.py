@@ -197,7 +197,7 @@ class ComparisonRewardPredictor(object):
 
         # Calculate correlation between true and predicted reward by running validation on recent episodes
         recent_paths = self.agent_logger.get_recent_paths_with_padding()
-        if recent_paths and self.agent_logger.summary_step % 10 == 0:  # Run validation every 10 iters
+        if len(recent_paths) > 1 and self.agent_logger.summary_step % 10 == 0:  # Run validation every 10 iters
             validation_obs = np.asarray([path["obs"] for path in recent_paths])
             validation_acts = np.asarray([path["actions"] for path in recent_paths])
             q_value = self.sess.run(self.q_value, feed_dict={
@@ -205,9 +205,12 @@ class ComparisonRewardPredictor(object):
                 self.segment_act_placeholder: validation_acts,
                 K.learning_phase(): False
             })
-            ep_reward_pred = np.sum(q_value, axis=1) + 1e-12  # Avoid dividing by zero
+            ep_reward_pred = np.sum(q_value, axis=1)
             reward_true = np.asarray([path['original_rewards'] for path in recent_paths])
-            ep_reward_true = np.sum(reward_true, axis=1) + 1e-12  # Avoid dividing by zero
+            ep_reward_true = np.sum(reward_true, axis=1)
+            # Try to prevent np.corrcoef from blowing up on data with 0 variance
+            ep_reward_pred[0] += 1e-12
+            ep_reward_true[0] += 1e-12
             self.agent_logger.log_simple("predictor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
 
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
