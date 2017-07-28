@@ -20,7 +20,8 @@ def _pad_with_end_state(path, desired_length):
         return path
     path = deepcopy(path)
     for k in path:
-        path[k] += [path[k][-1] for _ in range(desired_length - len(path[k]))]
+        # Casting path[k] as a list is necessary to avoid issues with concatinating numpy arrays.
+        path[k] = list(path[k]) + [path[k][-1] for _ in range(desired_length - len(path[k]))]
     return path
 
 class AgentLogger(object):
