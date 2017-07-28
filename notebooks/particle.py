@@ -25,7 +25,7 @@ class ParticleRewardPredictor(object):
     def predict_reward(self, path):
         # N.B. Observations include the original reset obs, and do not contain the obs resulting from the final action
         obs = path["obs"]
-        action = path['action']
+        action = path["actions"]
 
         loc = obs + action
         return -np.sum(np.square(loc), axis=tuple(i for i in range(1, obs.ndim)))

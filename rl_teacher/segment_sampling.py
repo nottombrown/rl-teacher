@@ -1,8 +1,15 @@
 import math
 from multiprocessing import Pool
+
 import numpy as np
 
 from rl_teacher.envs import get_timesteps_per_episode
+
+def _slice_path(path, segment_length, start_pos=0):
+    return {
+        k: np.asarray(v[start_pos:(start_pos + segment_length)])
+        for k, v in path.items()
+        if k in ['obs', "actions", 'original_rewards', 'human_obs']}
 
 def create_segment_q_states(segment):
     obs_Ds = segment["obs"]
@@ -18,10 +25,7 @@ def sample_segment_from_path(path, segment_length):
     start_pos = np.random.randint(0, path_length - segment_length + 1)
 
     # Build segment
-    segment = {
-        k: np.asarray(v[start_pos:(start_pos + segment_length)])
-        for k, v in path.items()
-        if k in ["obs", "actions", "original_rewards", "human_obs"]}
+    segment = _slice_path(path, segment_length, start_pos)
 
     # Add q_states
     segment["q_states"] = create_segment_q_states(segment)
@@ -55,9 +59,9 @@ def do_rollout(env, action_function):
     return path
 
 def basic_segments_from_rand_rollout(
-    env_id, make_env, n_desired_segments, clip_length_in_seconds,
-    # These are only for use with multiprocessing
-    _verbose=True, _multiplier=1
+        env_id, make_env, n_desired_segments, clip_length_in_seconds,
+        # These are only for use with multiprocessing
+        _verbose=True, _multiplier=1
 ):
     """ Generate a list of path segments by doing random rollouts. No multiprocessing. """
     segments = []

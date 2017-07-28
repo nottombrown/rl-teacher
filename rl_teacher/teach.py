@@ -7,19 +7,20 @@ from time import time, sleep
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from parallel_trpo.train import train_parallel
+from parallel_trpo.train import train_parallel_trpo
+from pposgd_mpi.run_mujoco import train_pposgd_mpi
 
 from rl_teacher.comparison_collectors import SyntheticComparisonCollector, HumanComparisonCollector
 from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.label_schedules import LabelAnnealer, ConstantLabelSchedule
 from rl_teacher.nn import FullyConnectedMLP
-from rl_teacher.video import SegmentVideoRecorder
 from rl_teacher.segment_sampling import create_segment_q_states
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.segment_sampling import segments_from_rand_rollout
 from rl_teacher.summaries import AgentLogger, make_summary_writer
 from rl_teacher.utils import slugify
+from rl_teacher.video import SegmentVideoRecorder
 
 CLIP_LENGTH = 1.5
 
@@ -32,6 +33,9 @@ class TraditionalRLRewardPredictor():
     def predict_reward(self, path):
         self.agent_logger.log_episode(path)
         return path["original_rewards"]
+
+    def path_callback(self, path):
+        pass
 
 class ComparisonRewardPredictor():
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
@@ -109,7 +113,7 @@ class ComparisonRewardPredictor():
         })
         return q_state_reward_pred[0]
 
-    def path_callback(self, path, iteration):
+    def path_callback(self, path):
         path_length = len(path["obs"])
         self._steps_since_last_training += path_length
 
@@ -179,7 +183,7 @@ def main():
     parser.add_argument('-l', '--n_labels', default=None, type=int)
     parser.add_argument('-L', '--pretrain_labels', default=None, type=int)
     parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
-    parser.add_argument('-a', '--agent', default="parallel_trpo", type=str)
+    parser.add_argument('-a', '--agent', default="pposgd_mpi", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     args = parser.parse_args()
 
@@ -260,7 +264,7 @@ def main():
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
     print("Starting joint training of predictor and agent")
     if args.agent == "parallel_trpo":
-        train_parallel(
+        train_parallel_trpo(
             env_id=env_id,
             make_env=make_with_torque_removed,
             predictor=wrapped_predictor,
@@ -272,6 +276,11 @@ def main():
             max_kl=0.001,
             seed=args.seed,
         )
+    elif args.agent == "pposgd_mpi":
+        def make_env():
+            return make_with_torque_removed(env_id)
+
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=wrapped_predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 
