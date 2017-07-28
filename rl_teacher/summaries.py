@@ -19,8 +19,8 @@ def _pad_with_end_state(path, desired_length):
     if len(path["obs"]) >= desired_length:
         return path
     path = deepcopy(path)
-    for k, v in path:
-        path[k] += [v[-1] for _ in range(desired_length - len(v))]
+    for k in path:
+        path[k] += [path[k][-1] for _ in range(desired_length - len(path[k]))]
     return path
 
 class AgentLogger(object):
