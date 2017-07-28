@@ -42,6 +42,8 @@ class AgentLogger(object):
         Returns the last_n_paths, but with short paths being padded out so the result
         can safely be made into an array.
         """
+        if len(self.last_n_paths) == 0:
+            return []
         max_len = max([len(path["obs"]) for path in self.last_n_paths])
         return [_pad_with_end_state(path, max_len) for path in self.last_n_paths]
 
