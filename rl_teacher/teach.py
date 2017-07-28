@@ -19,7 +19,7 @@ from rl_teacher.segment_sampling import create_segment_q_states
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.segment_sampling import segments_from_rand_rollout
 from rl_teacher.summaries import AgentLogger, make_summary_writer
-from rl_teacher.utils import slugify
+from rl_teacher.utils import slugify, corrcoef
 from rl_teacher.video import SegmentVideoRecorder
 
 CLIP_LENGTH = 1.5
@@ -165,10 +165,7 @@ class ComparisonRewardPredictor():
             ep_reward_pred = np.sum(q_state_reward_pred, axis=1)
             q_state_reward_true = np.asarray([path['original_rewards'] for path in recent_paths])
             ep_reward_true = np.sum(q_state_reward_true, axis=1)
-            # Try to prevent np.corrcoef from blowing up on data with 0 variance
-            ep_reward_pred[0] += 1e-12
-            ep_reward_true[0] += 1e-12
-            self.agent_logger.log_simple("predictor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
+            self.agent_logger.log_simple("predictor/correlations", corrcoef(ep_reward_true, ep_reward_pred))
 
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
