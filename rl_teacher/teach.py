@@ -15,12 +15,12 @@ from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.label_schedules import LabelAnnealer, ConstantLabelSchedule
 from rl_teacher.nn import FullyConnectedMLP
-from rl_teacher.segment_sampling import SegmentVideoRecorder
 from rl_teacher.segment_sampling import create_segment_q_states
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.segment_sampling import segments_from_rand_rollout
 from rl_teacher.summaries import AgentLogger, make_summary_writer
 from rl_teacher.utils import slugify
+from rl_teacher.video import SegmentVideoRecorder
 
 CLIP_LENGTH = 1.5
 
@@ -224,7 +224,9 @@ def main():
             label_schedule = ConstantLabelSchedule(pretrain_labels=pretrain_labels)
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
-        pretrain_segments = segments_from_rand_rollout(args.seed, env_id, env, n_segments=pretrain_labels * 5)
+        pretrain_segments = segments_from_rand_rollout(
+            env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 5,
+            clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
 
         # Pull in our pretraining segments
         while len(comparison_collector) < int(pretrain_labels):  # Turn our segments into comparisons
@@ -277,6 +279,7 @@ def main():
     elif args.agent == "pposgd_mpi":
         def make_env():
             return make_with_torque_removed(env_id)
+
         train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=wrapped_predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
