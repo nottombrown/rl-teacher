@@ -185,6 +185,7 @@ def main():
     parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
     parser.add_argument('-a', '--agent', default="pposgd_mpi", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
+    parser.add_argument('-V', '--no_videos', action="store_true")
     args = parser.parse_args()
 
     env_id = args.env_id
@@ -253,9 +254,9 @@ def main():
                 print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
-    wrapped_predictor = SegmentVideoRecorder(
-        predictor, env, checkpoint_interval=20,
-        save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
+    if not args.no_videos:
+        predictor = SegmentVideoRecorder(predictor, env, checkpoint_interval=20,
+            save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
@@ -264,7 +265,7 @@ def main():
         train_parallel_trpo(
             env_id=env_id,
             make_env=make_with_torque_removed,
-            predictor=wrapped_predictor,
+            predictor=predictor,
             summary_writer=summary_writer,
             workers=args.workers,
             runtime=(num_timesteps / 1000),
