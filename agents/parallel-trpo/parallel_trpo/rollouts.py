@@ -127,7 +127,7 @@ class ParallelRollout(object):
         # we will start by running 20,000 / 1000 = 20 episodes for the first iteration  TODO OLD
         self.average_timesteps_in_episode = 1000
 
-    def rollout(self, timesteps, iteration):
+    def rollout(self, timesteps):
         start_time = time()
         # keep 20,000 timesteps per update  TODO OLD
         num_rollouts = int(timesteps / self.average_timesteps_in_episode)
@@ -145,7 +145,7 @@ class ParallelRollout(object):
             ################################
             path["original_rewards"] = path["rewards"]
             path["rewards"] = self.predictor.predict_reward(path)
-            self.predictor.path_callback(path, iteration)
+            self.predictor.path_callback(path)
             ################################
             #   END REWARD MODIFICATIONS   #
             ################################
