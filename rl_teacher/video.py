@@ -24,10 +24,11 @@ class SegmentVideoRecorder(object):
     def path_callback(self, path):
         if self._num_paths_seen % self.checkpoint_interval == 0:  # and self._num_paths_seen != 0:
             if self._counter < self.n_desired_videos_per_checkpoint:
-                fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._num_paths_seen, self._counter)
-                print("Saving video of run %s_%s to %s" % (self._num_paths_seen, self._counter, fname))
                 ep_length = get_timesteps_per_episode(self.env)
                 full_run = sample_segment_from_path(_slice_path(path, ep_length), ep_length)
+
+                fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._num_paths_seen, self._counter)
+                print("Saving video of run %s_%s to %s" % (self._num_paths_seen, self._counter, fname))
                 write_segment_to_video(full_run, fname, self.env)
                 self._counter += 1
         else:
