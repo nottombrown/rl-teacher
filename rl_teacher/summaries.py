@@ -51,11 +51,10 @@ class AgentLogger(object):
     def log_episode(self, path):
         self._timesteps_elapsed += len(path["obs"])
         self._timesteps_since_last_training += len(path["obs"])
-
         self.last_n_paths.append(path)
+
         if self._timesteps_since_last_training >= self.timesteps_per_summary:
             self.summary_step += 1
-
             if 'new' in path: # PPO puts multiple episodes into one path
                 last_n_episode_scores = [np.sum(path["original_rewards"]).astype(float) / np.sum(path["new"])
                     for path in self.last_n_paths]
@@ -64,7 +63,6 @@ class AgentLogger(object):
 
             self.log_simple("agent/true_reward_per_episode", np.mean(last_n_episode_scores))
             self.log_simple("agent/total_steps", self._timesteps_elapsed, )
-
             self._timesteps_since_last_training -= self.timesteps_per_summary
             self.summary_writer.flush()
 
