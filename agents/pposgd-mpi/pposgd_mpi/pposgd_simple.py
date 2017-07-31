@@ -221,8 +221,6 @@ def learn(env, policy_func, *,
         lens, rews = map(flatten_lists, zip(*listoflrpairs))
         lenbuffer.extend(lens)
         rewbuffer.extend(rews)
-        logger.record_tabular("EpLenMean", np.mean(lenbuffer))
-        logger.record_tabular("EpRewMean", np.mean(rewbuffer))
         logger.record_tabular("EpThisIter", len(lens))
         episodes_so_far += len(lens)
         timesteps_so_far += sum(lens)
@@ -230,6 +228,8 @@ def learn(env, policy_func, *,
         logger.record_tabular("EpisodesSoFar", episodes_so_far)
         logger.record_tabular("TimestepsSoFar", timesteps_so_far)
         logger.record_tabular("TimeElapsed", time.time() - tstart)
+        logger.record_tabular("EpLenMean", np.mean(lenbuffer))
+        logger.record_tabular("EpRewMean", np.mean(rewbuffer))
         if MPI.COMM_WORLD.Get_rank()==0:
             logger.dump_tabular()
 

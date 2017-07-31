@@ -278,7 +278,7 @@ def main():
         def make_env():
             return make_with_torque_removed(env_id)
 
-        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=wrapped_predictor)
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 
