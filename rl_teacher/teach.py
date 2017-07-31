@@ -50,7 +50,7 @@ class ComparisonRewardPredictor():
         self.recent_segments = deque(maxlen=200)  # Keep a queue of recently seen segments to pull new comparisons from
         self._frames_per_segment = CLIP_LENGTH * env.fps
         self._steps_since_last_training = 0
-        self._n_paths_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._n_timesteps_per_predictor_training = 1e2  # How often should we train our predictor?
 
         # Build and initialize our predictor model
         self.sess = tf.InteractiveSession()
@@ -131,11 +131,12 @@ class ComparisonRewardPredictor():
                 random.choice(self.recent_segments))
 
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_paths_per_predictor_training):
+        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
             self.train_predictor()
             self._steps_since_last_training -= self._steps_since_last_training
 
     def train_predictor(self):
+        print("XXX training_pred")
         self.comparison_collector.label_unlabeled_comparisons()
 
         minibatch_size = min(64, len(self.comparison_collector.labeled_decisive_comparisons))
