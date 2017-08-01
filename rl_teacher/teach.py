@@ -139,7 +139,7 @@ class ComparisonRewardPredictor():
         print("XXX training_pred")
         self.comparison_collector.label_unlabeled_comparisons()
 
-        minibatch_size = min(256, len(self.comparison_collector.labeled_decisive_comparisons))
+        minibatch_size = min(64, len(self.comparison_collector.labeled_decisive_comparisons))
         labeled_comparisons = random.sample(self.comparison_collector.labeled_decisive_comparisons, minibatch_size)
         left_q_states = np.asarray([comp['left']['q_states'] for comp in labeled_comparisons])
         right_q_states = np.asarray([comp['right']['q_states'] for comp in labeled_comparisons])
