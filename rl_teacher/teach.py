@@ -185,7 +185,7 @@ def main():
     parser.add_argument('-w', '--workers', default=4, type=int)
     parser.add_argument('-l', '--n_labels', default=None, type=int)
     parser.add_argument('-L', '--pretrain_labels', default=None, type=int)
-    parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
+    parser.add_argument('-t', '--num_timesteps', default=5e6, type=int)
     parser.add_argument('-a', '--agent', default="pposgd_mpi", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
