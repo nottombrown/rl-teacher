@@ -185,7 +185,7 @@ def main():
     parser.add_argument('-w', '--workers', default=4, type=int)
     parser.add_argument('-l', '--n_labels', default=None, type=int)
     parser.add_argument('-L', '--pretrain_labels', default=None, type=int)
-    parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
+    parser.add_argument('-t', '--num_timesteps', default=5e6, type=int)
     parser.add_argument('-a', '--agent', default="pposgd_mpi", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
@@ -229,7 +229,7 @@ def main():
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
         pretrain_segments = segments_from_rand_rollout(env_id, make_with_torque_removed,
-            n_desired_segments=pretrain_labels * 2, clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
+            n_desired_segments=pretrain_labels * 2, clip_length_in_seconds=CLIP_LENGTH)
         for i in range(pretrain_labels):  # Turn our random segments into comparisons
             comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
 
