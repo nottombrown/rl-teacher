@@ -1,5 +1,6 @@
 import time
 from collections import deque
+from copy import deepcopy
 
 import numpy as np
 import pposgd_mpi.common.tf_util as U
@@ -60,6 +61,7 @@ def traj_segment_generator(pi, env, steps_per_batch, stochastic, predictor=None)
             # several of these batches, then be sure to do a deepcopy
             ep_rets = []
             ep_lens = []
+
         i = t % steps_per_batch
         obs[i] = ob
         human_obs[i] = info.get("human_obs")
@@ -82,10 +84,12 @@ def traj_segment_generator(pi, env, steps_per_batch, stochastic, predictor=None)
         t += 1
 
 def split_path_by_episode(path):
+    """Split path into episodes and yield a deepcopy of each one"""
     ep_breaks = np.where(path['new'])[0]
     start = ep_breaks[0]
     for end in ep_breaks[1:]:
-        yield {k: v[start:end] for k, v in path.items() if k in ['obs', 'actions', 'original_rewards', 'human_obs']}
+        yield deepcopy({k: v[start:end] for k, v in path.items()
+            if k in ['obs', 'actions', 'original_rewards', 'human_obs']})
         start = end
 
 def add_vtarg_and_adv(seg, gamma, lam):
