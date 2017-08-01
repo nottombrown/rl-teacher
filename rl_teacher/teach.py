@@ -136,7 +136,6 @@ class ComparisonRewardPredictor():
             self._steps_since_last_training -= self._steps_since_last_training
 
     def train_predictor(self):
-        print("XXX training_pred")
         self.comparison_collector.label_unlabeled_comparisons()
 
         minibatch_size = min(64, len(self.comparison_collector.labeled_decisive_comparisons))
