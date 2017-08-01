@@ -50,7 +50,7 @@ class ComparisonRewardPredictor():
         self.recent_segments = deque(maxlen=200)  # Keep a queue of recently seen segments to pull new comparisons from
         self._frames_per_segment = CLIP_LENGTH * env.fps
         self._steps_since_last_training = 0
-        self._n_paths_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._n_timesteps_per_predictor_training = 1e2  # How often should we train our predictor?
 
         # Build and initialize our predictor model
         self.sess = tf.InteractiveSession()
@@ -131,7 +131,7 @@ class ComparisonRewardPredictor():
                 random.choice(self.recent_segments))
 
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_paths_per_predictor_training):
+        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
             self.train_predictor()
             self._steps_since_last_training -= self._steps_since_last_training
 
@@ -185,6 +185,7 @@ def main():
     parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
     parser.add_argument('-a', '--agent', default="pposgd_mpi", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
+    parser.add_argument('-V', '--no_videos', action="store_true")
     args = parser.parse_args()
 
     env_id = args.env_id
@@ -253,9 +254,8 @@ def main():
                 print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
-    wrapped_predictor = SegmentVideoRecorder(
-        predictor, env, checkpoint_interval=20,
-        save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
+    if not args.no_videos:
+        predictor = SegmentVideoRecorder(predictor, env, save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
@@ -264,7 +264,7 @@ def main():
         train_parallel_trpo(
             env_id=env_id,
             make_env=make_with_torque_removed,
-            predictor=wrapped_predictor,
+            predictor=predictor,
             summary_writer=summary_writer,
             workers=args.workers,
             runtime=(num_timesteps / 1000),
@@ -277,7 +277,7 @@ def main():
         def make_env():
             return make_with_torque_removed(env_id)
 
-        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=wrapped_predictor)
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 

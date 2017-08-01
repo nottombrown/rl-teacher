@@ -84,7 +84,7 @@ class Actor(multiprocess.Process):
     def rollout(self):
         obs, actions, rewards, avg_action_dists, logstd_action_dists, human_obs = [], [], [], [], [], []
         ob = filter_ob(self.env.reset())
-        for i in range(self.max_timesteps_per_episode - 1):
+        for i in range(self.max_timesteps_per_episode):
             action, avg_action_dist, logstd_action_dist = self.act(ob)
 
             obs.append(ob)
@@ -98,7 +98,7 @@ class Actor(multiprocess.Process):
             rewards.append(rew)
             human_obs.append(info.get("human_obs"))
 
-            if done or i == self.max_timesteps_per_episode - 2:
+            if done or i == self.max_timesteps_per_episode - 1:
                 path = {
                     "obs": np.concatenate(np.expand_dims(obs, 0)),
                     "avg_action_dist": np.concatenate(avg_action_dists),
@@ -127,7 +127,7 @@ class ParallelRollout(object):
         # we will start by running 20,000 / 1000 = 20 episodes for the first iteration  TODO OLD
         self.average_timesteps_in_episode = 1000
 
-    def rollout(self, timesteps, iteration):
+    def rollout(self, timesteps):
         start_time = time()
         # keep 20,000 timesteps per update  TODO OLD
         num_rollouts = int(timesteps / self.average_timesteps_in_episode)
@@ -145,7 +145,7 @@ class ParallelRollout(object):
             ################################
             path["original_rewards"] = path["rewards"]
             path["rewards"] = self.predictor.predict_reward(path)
-            self.predictor.path_callback(path, iteration)
+            self.predictor.path_callback(path)
             ################################
             #   END REWARD MODIFICATIONS   #
             ################################
