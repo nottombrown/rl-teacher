@@ -1,6 +1,3 @@
-import math
-from multiprocessing import Pool
-
 import numpy as np
 
 from rl_teacher.envs import get_timesteps_per_episode
@@ -58,12 +55,8 @@ def do_rollout(env, action_function):
         "human_obs": np.array(human_obs)}
     return path
 
-def basic_segments_from_rand_rollout(
-        env_id, make_env, n_desired_segments, clip_length_in_seconds,
-        # These are only for use with multiprocessing
-        _verbose=True, _multiplier=1
-):
-    """ Generate a list of path segments by doing random rollouts. No multiprocessing. """
+def segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds):
+    """ Generate a list of path segments by doing random rollouts. """
     segments = []
     env = make_env(env_id)
     segment_length = int(clip_length_in_seconds * env.fps)
@@ -77,22 +70,8 @@ def basic_segments_from_rand_rollout(
             if segment:
                 segments.append(segment)
 
-            if _verbose and len(segments) % 10 == 0 and len(segments) > 0:
-                print("Collected %s/%s segments" % (len(segments) * _multiplier, n_desired_segments * _multiplier))
+            if len(segments) % 10 == 0 and len(segments) > 0:
+                print("Collected %s/%s segments" % (len(segments), n_desired_segments))
 
-    if _verbose:
-        print("Successfully collected %s segments" % (len(segments) * _multiplier))
+    print("Successfully collected %s segments" % (len(segments)))
     return segments
-
-def segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds, workers):
-    """ Generate a list of path segments by doing random rollouts. Can use multiple processes. """
-    if workers < 2:  # Default to basic segment collection
-        return basic_segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length_in_seconds)
-
-    pool = Pool(processes=workers)
-    segments_per_worker = int(math.ceil(n_desired_segments / workers))
-    # One job per worker. Only the first worker is verbose.
-    jobs = [(env_id, make_env, segments_per_worker, clip_length_in_seconds, i == 0, workers) for i in range(workers)]
-    results = pool.starmap(basic_segments_from_rand_rollout, jobs)
-    pool.close()
-    return [segment for sublist in results for segment in sublist]
