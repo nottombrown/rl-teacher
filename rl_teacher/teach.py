@@ -51,6 +51,7 @@ class ComparisonRewardPredictor():
         self._frames_per_segment = CLIP_LENGTH * env.fps
         self._steps_since_last_training = 0
         self._n_timesteps_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._elapsed_predictor_training_iters = 0
 
         # Build and initialize our predictor model
         self.sess = tf.InteractiveSession()
@@ -149,6 +150,7 @@ class ComparisonRewardPredictor():
             self.labels: np.asarray([comp['label'] for comp in labeled_comparisons]),
             K.learning_phase(): True
         })
+        self._elapsed_predictor_training_iters += 1
         self._write_training_summaries(loss)
 
     def _write_training_summaries(self, loss):
@@ -167,6 +169,7 @@ class ComparisonRewardPredictor():
             ep_reward_true = np.sum(q_state_reward_true, axis=1)
             self.agent_logger.log_simple("predictor/correlations", corrcoef(ep_reward_true, ep_reward_pred))
 
+        self.agent_logger.log_simple("predictor/num_training_iters", self._elapsed_predictor_training_iters)
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
         self.agent_logger.log_simple(
