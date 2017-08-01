@@ -8,7 +8,7 @@ import numpy as np
 from gym import error
 
 class SegmentVideoRecorder(object):
-    def __init__(self, predictor, env, save_dir, n_desired_videos_per_checkpoint=1, checkpoint_interval=10):
+    def __init__(self, predictor, env, save_dir, n_desired_videos_per_checkpoint=3, checkpoint_interval=500):
         self.predictor = predictor
         self.env = env
         self.n_desired_videos_per_checkpoint = n_desired_videos_per_checkpoint
