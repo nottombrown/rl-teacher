@@ -19,7 +19,11 @@ See our [agent circus](#agent-circus) for other tricks that you can train an age
 
 - A [reward predictor](/rl_teacher/teach.py) that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
 - Several [example agents](/agents) that learn via a function specified by the reward predictor
-- A [webapp](/human-feedback-api) that humans can use to give feedback, providing the data used to train the reward predictor
+- A [webapp](/human-feedback-api) that humans can use to give feedback, providing the data used to train the reward predictor. The webapp interface is shown below.
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
+</p>
 
 Together with a set of integrations to [OpenAI gym](https://github.com/openai/gym), these components implement the full system described in  [*Deep RL from Human Preferences*](https://arxiv.org/abs/1706.03741)
 
@@ -27,11 +31,6 @@ Together with a set of integrations to [OpenAI gym](https://github.com/openai/gy
 <img src="https://blog.openai.com/content/images/2017/06/diagram-4.png" />
 </p>
 
-You can see the webapp interface presented to the human teacher below:
-
-<p align="center">
-<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
-</p>
 
 ## Installation
 
