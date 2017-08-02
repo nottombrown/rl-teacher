@@ -19,26 +19,19 @@ See our [agent circus](#agent-circus) for other tricks that you can train an age
 
 - A [reward predictor](/rl_teacher/teach.py) that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
 - Several [example agents](/agents) that learn via a function specified by the reward predictor
-- A [webapp](/human-feedback-api) that humans can use to give feedback, providing the data used to train the reward predictor. 
+- A [webapp](/human-feedback-api) that humans can use to give feedback, providing the data used to train the reward predictor
 
-You can see the interface presented to the human teacher below:
-
-<p align="center">
-<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
-</p>
-
-## How does the underlying algorithm work?
-
-Using human feedback directly as a reward function is prohibitively expensive for RL systems that require thousands of episodes of experience. Instead, we use a two-part approach:
-
-1. A _reward predictor_ learns a reward function from human feedback. (See purple box in diagram below)
-2. A _reinforcement learning algorithm_ learns to take actions that optimize the predicted reward, using standard RL techniques. (In this repository we use PPO [Schulman et al., 2017], but any RL algorithm can be used).
+Together with a set of integrations to [OpenAI gym](https://github.com/openai/gym), these components implement the full system described in  [*Deep RL from Human Preferences*](https://arxiv.org/abs/1706.03741)
 
 <p align="center">
 <img src="https://blog.openai.com/content/images/2017/06/diagram-4.png" />
 </p>
 
-For more details, see https://arxiv.org/abs/1706.03741
+You can see the webapp interface presented to the human teacher below:
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
+</p>
 
 ## Installation
 
