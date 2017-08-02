@@ -2,41 +2,35 @@
 
 `rl-teacher` is an implementation of *Deep Reinforcement Learning from Human Preferences* (https://arxiv.org/abs/1706.03741)
 
-The system allows you to train a reinforcement learning agent to do novel behaviors, even when:
+The system allows you to teach a reinforcement learning agent novel behaviors, even when:
 
-1. the task/behavior does not have a pre-defined reward function, and
-2. a human can recognize the desired behavior, but they cannot demonstrate it.
+1. The behavior does not have a pre-defined reward function, and
+2. A human can recognize the desired behavior, but cannot demonstrate it.
 
-It's also just a lot of fun to train simulated robots to do whatever you want! For example, in the MuJoCo "Hopper" environment, the agent is usually rewarded for moving forwards, but you might want to teach it to do a backflip instead:
+It's also just a lot of fun to train simulated robots to do whatever you want! For example, in the MuJoCo "Walker" environment, the agent is usually rewarded for moving forwards, but you might want to teach it to do ballet instead:
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/306655/28396079-e5366bca-6cad-11e7-934e-60f5f1ce972f.gif" />
+<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
 </p>
-
 
 See our [agent circus](#agent-circus) for other tricks that you can train an agent to do using `rl-teacher`
 
-## What is in this repository?
+## What's in this repository?
 
-- A command-line interface for running *Deep RL from Human Preferences* (Christiano et al. 2017) on any MuJoCo OpenAI Gym environment 
-- A browser-based interface for providing human feedback on trajectory segments
- 
-<p align="center">
-<img src="https://d2mxuefqeaa7sj.cloudfront.net/s_DD71AC3B56A62FB5EDB3FC2845498CE684AF55FAEBB10867B9073164786FB374_1500511262204_image.png" />
-</p>
-
+- A reward predictor that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
+- Several example agents that learn via a function specified by the reward predictor
+- A webapp that humans can use to give feedback, providing the data used to train the reward predictor
 
 ## How does the underlying algorithm work?
 
-Using human feedback directly as a reward function is prohibitively expensive for RL systems that require hundreds or thousands of hours of experience. Instead, we use a two-part approach:
+Using human feedback directly as a reward function is prohibitively expensive for RL systems that require thousands of episodes of experience. Instead, we use a two-part approach:
 
 1. A _reward predictor_ learns a reward function from human feedback. (See purple box in diagram below)
-2. A _reinforcement learning algorithm_ learns to take actions that optimize the predicted reward, using standard RL techniques. (In this repository we use TRPO [Schulman et al., 2015], but any RL algorithm can be used).
+2. A _reinforcement learning algorithm_ learns to take actions that optimize the predicted reward, using standard RL techniques. (In this repository we use PPO [Schulman et al., 2017], but any RL algorithm can be used).
 
 [diagram](https://blog.openai.com/content/images/2017/06/diagram-4.png)
 
 For more details, see https://arxiv.org/abs/1706.03741
-
 
 ## Installation
 
@@ -59,11 +53,9 @@ Then run the following to install the rl-teacher code into your conda environmen
 
 Run the following command to do baseline reinforcement learning directly from the hard-coded reward function. This does not use human feedback at all, but is a good way to test that MuJoCo is working and that the RL agent is configured correctly and can learn successfully on its own.
 
-
     python rl_teacher/teach.py -p rl -e Reacher-v1 -n base-rl
 
 By default, this will write tensorboard files to `~/tb/rl-teacher/base-rl`. Start tensorboard as follows:
-
 
     $ tensorboard --logdir ~/tb/rl-teacher/
     Starting TensorBoard b'47' at http://0.0.0.0:6006
@@ -71,37 +63,30 @@ By default, this will write tensorboard files to `~/tb/rl-teacher/base-rl`. Star
 
 Navigate to http://0.0.0.0:6006 in a browser to view your learning curves, which should look like the following: 
 
-
 ![rl-graph](https://user-images.githubusercontent.com/306655/28334197-4030f5ae-6baf-11e7-8913-48417f0e8285.png)
 
 ## Synthetic labels
 
-Next we will move to the two-part training scheme (train a separate reward predictor, and use RL on the predicted reward), but rather than collecting genuine human feedback, we will generate synthetic feedback from the hard-coded reward function. This provides us with another sanity check and a useful comparison of learning from the reward predictor versus learning from the true reward.
+Next we'll use the two-part training scheme (train a separate reward predictor, and use RL on the predicted reward), but instead of collecting genuine human feedback, we'll generate synthetic feedback from the reward function hard-coded into the environment. This provides us with another sanity check and a useful comparison of learning from the reward predictor versus learning from the true reward.
 
-Instead of `-p` `rl` above, we specify `-p synth` to use a synthetic predictor. We'll use the same environment (-e Reacher-v1), give this run a new name (-n syn-700), and ask for 700 total labels (-l 700).
-
+Instead of `-p rl` above, we specify `-p synth` to use a synthetic predictor. We'll use the same environment (`-e Reacher-v1`), give this run a new name (`-n syn-700`), and ask for 700 total labels (`-l 700`).
 
     python rl_teacher/teach.py -p synth -l 700 -e Reacher-v1 -n syn-700
 
-Your tensorboard curves should look like the following.
+Your tensorboard curves should look like the following:
 
 ![synth-graph](https://d2mxuefqeaa7sj.cloudfront.net/s_DD71AC3B56A62FB5EDB3FC2845498CE684AF55FAEBB10867B9073164786FB374_1500503616973_image.png)
 
-
-Notice that the agent reaches a score of -5.0 in about 1000 timesteps when learning from just 700 datapoints of synthetic feedback, as compared to 800 timesteps when learning from the true reward function. This is a bit slower, but not much. This suggests that a few hundred datapoints of human feedback would be enough for the agent to learn a novel task of similar complexity.
+Notice that the agent reaches a score of `-5.0` in about 1000 training iterations when learning from just 700 datapoints of synthetic feedback, as compared to 800 timesteps when learning from the true reward function. This is a bit slower, but not much. This suggests that a few hundred datapoints of human feedback would be enough for the agent to learn a novel task of similar complexity.
 
 If you'd like to know exactly how synthetic labels are calculated, you can read the code in `SyntheticComparisonCollector`.
-
 
 ## Human labels
 
 To train your agent based off of feedback from a real human, you’ll run two separate processes:
 
 1. The agent training process. This is very similar to the commands we ran above.
-2.  A webapp, which will show you short video clips of trajectories and ask you to rate which clip is better.
-
-![spinterface](https://d2mxuefqeaa7sj.cloudfront.net/s_70DA235B532C29881237939A9B4710C579961BE380D0A4E3A7AD2910654AC547_1500510926723_spinterface.gif)
-
+2. A webapp, which will show you short video clips of trajectories and ask you to rate which clip is better.
 
 #### Set up the `human-feedback-api` webapp
 First you'll need to set up django. This will create a `db.sqlite3` in your local directory.
@@ -127,10 +112,9 @@ If you don't already have GCS set up, [create a new GCS account](https://cloud.g
 #### Run your agent
 Now we're ready to train an agent with human feedback!
 
-Note: if you have access to a remote server, we highly recommend running the agent training remotely, and provide feedback in the webapp locally. You can run both the agent training and the feedback app on your local machine at the same time. However, it will be annoying, because the rendering process during training will steal focus, and also because training will be slow. For more information on running the agent training remotely, see the [Remote Server instructions](#using-a-remote-server-for-agent-training) below.
+Note: if you have access to a remote server, we highly recommend running the agent training remotely, and provide feedback in the webapp locally. You can run both the agent training and the feedback app on your local machine at the same time. However, it will be annoying, because the rendering process during training will often steal window focus. For more information on running the agent training remotely, see the [Remote Server instructions](#using-a-remote-server-for-agent-training) below.
 
 Run the command below to start the agent training. The agent will start to take random actions in the environment, and will generate example trajectory segments for you to label:
-
 
     $ python rl_teacher/teach.py -p human --pretrain_labels 175 -e Reacher-v1 -n human-175
     Using TensorFlow backend.
@@ -153,14 +137,12 @@ Run the command below to start the agent training. The agent will start to take 
 
 Once the training process has generated videos for the trajectories it wants you to label, you will see it uploading these to GCS:
 
-
     ...
     Copying media to gs://rl-teacher-catherio/d659f8b4-c701-4eab-8358-9bd532a1661b-right.mp4 in a background process
     Copying media to gs://rl-teacher-catherio/9ce75215-66e7-439d-98c9-39e636ebb8a4-left.mp4 in a background process
     ...
 
 In the meantime the agent training will pause, and wait for your feedback:
-
 
     0/175 comparisons labeled. Please add labels w/ the human-feedback-api. Sleeping...
 
@@ -174,13 +156,11 @@ At this point, you can click on the active experiment to enter the labeling inte
 
 Once you are in the labeling interface, you will see pairs of clips. For each pair, indicate which one shows better behavior, for whatever you are trying to teach the agent to do. (To start with, you might try to teach Reacher how to spin counter-clockwise, or come up with your own task!)
 
-
 ![](https://d2mxuefqeaa7sj.cloudfront.net/s_70DA235B532C29881237939A9B4710C579961BE380D0A4E3A7AD2910654AC547_1500511630006_compare.gif)
-
 
 Once you have finished labeling the 175 pretraining comparisons, we train the predictor to convergence on the initial comparisons. After that, it will request additional comparisons every few seconds.
 
-If you see a blank screen like this at any point, it means the clip is not yet ready to display. Try waiting a few minutes and refreshing the page, or click "Can't tell" to move on and try another clip
+If you see a blank screen like this at any point, it means the clip is not yet ready to display. Try waiting a few minutes and refreshing the page, or click `Can't tell` to move on and try another clip
 
 That's it! The more feedback you provide, the better your agent will get at the task.
 
