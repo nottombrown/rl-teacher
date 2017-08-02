@@ -238,6 +238,6 @@ On the right are agents that were trained to do tricks based off human feedback;
 # Acknowledgments
 A huge thanks to Paul Christiano and Dario Amodei for the design of this system and for encouragement to make an open source version.  
 
-Max Harms ([@raelifin](https://github.com/Raelifin)) wrote substantial portions of the system. Thank you for integrating and tuning the parellized TRPO implementation, and for adding many additional features and improvements.
+Max Harms ([@raelifin](https://github.com/Raelifin)) wrote substantial portions of the system. Max integrated and tuned the parellized TRPO implementation, added many additional features and improvements, and trained the picturesque Walker Ballerina featured prominently in this repo.
 
 Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).
