@@ -241,6 +241,11 @@ On the right are agents that were trained to do tricks based off human feedback;
 | ![hopper_normal](https://user-images.githubusercontent.com/306655/28431273-a6e19666-6d38-11e7-8c96-cab779147546.gif) | ![hopper_backflip_full](https://user-images.githubusercontent.com/306655/28431444-420bb82e-6d39-11e7-84a5-6f9f93883031.gif) |
 
 
+| Cheetah Normal  | Cheetah Tapdance              |
+| -------------- | ---------------------------- |
+| ![ppo_cheetah_normal](https://user-images.githubusercontent.com/306655/28886801-9682c7a4-776f-11e7-8c28-8dd5b7f9b0e9.gif) | ![ppo_cheetah_hindleg](https://user-images.githubusercontent.com/306655/28886748-6c4a30c6-776f-11e7-84c5-2314835fc207.gif) |
+
+
 
 # Acknowledgments
 A huge thanks to Paul Christiano and Dario Amodei for the design of this system and for encouragement to make an open source version.  
