@@ -17,9 +17,11 @@ See our [agent circus](#agent-circus) for other tricks that you can train an age
 
 ## What's in this repository?
 
-- A reward predictor that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
-- Several example agents that learn via a function specified by the reward predictor
-- A webapp that humans can use to give feedback, providing the data used to train the reward predictor
+- A [reward predictor](/rl_teacher/teach.py) that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
+- Several [example agents](/agents) that learn via a function specified by the reward predictor
+- A [webapp](/human-feedback-api) that humans can use to give feedback, providing the data used to train the reward predictor. 
+
+You can see the interface presented to the human teacher below:
 
 <p align="center">
 <img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
