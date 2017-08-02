@@ -10,7 +10,7 @@ The system allows you to teach a reinforcement learning agent novel behaviors, e
 It's also just a lot of fun to train simulated robots to do whatever you want! For example, in the MuJoCo "Walker" environment, the agent is usually rewarded for moving forwards, but you might want to teach it to do ballet instead:
 
 <p align="center">
-<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
+<img src="https://user-images.githubusercontent.com/306655/28396526-d4ce6334-6cb0-11e7-825c-63a85c8ff533.gif" />
 </p>
 
 See our [agent circus](#agent-circus) for other tricks that you can train an agent to do using `rl-teacher`
@@ -20,6 +20,10 @@ See our [agent circus](#agent-circus) for other tricks that you can train an age
 - A reward predictor that can be plugged into any agent, and learns to predict which actions the human teacher would approve of
 - Several example agents that learn via a function specified by the reward predictor
 - A webapp that humans can use to give feedback, providing the data used to train the reward predictor
+
+<p align="center">
+<img src="https://user-images.githubusercontent.com/306655/28898662-f3cd9142-779b-11e7-9252-137f9107c099.gif" />
+</p>
 
 ## How does the underlying algorithm work?
 
