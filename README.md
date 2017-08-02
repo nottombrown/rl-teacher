@@ -207,7 +207,7 @@ Test that video rendering works end to end
 
 
 # Agent Circus
-On the right are agents that were trained to do tricks based off human feedback; on the left, their counterparts trained with traditional RL.
+On the right are agents that were trained to do tricks based off human feedback; on the left, their counterparts trained with traditional RL. Cheetah was trained using PPO, and all other agents were trained with TRPO.
 
 | Walker Normal  | Walker Ballerina               |
 | -------------- | ---------------------------- |
