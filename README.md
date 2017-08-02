@@ -212,9 +212,9 @@ On the right are agents that were trained to do tricks based off human feedback;
 | -------------- | ---------------------------- |
 | ![walker_normal](https://user-images.githubusercontent.com/306655/28396993-a45caa1e-6cb3-11e7-8f6c-c043ca76ff01.gif) | ![walker_ballerina](https://user-images.githubusercontent.com/306655/28396526-d4ce6334-6cb0-11e7-825c-63a85c8ff533.gif)|
 
-| Reacher Normal  | Reacher Fearful               |
+| Reacher Normal  | Reacher Opposite               |
 | -------------- | ---------------------------- |
-| ![reacher_normal](https://user-images.githubusercontent.com/306655/28396465-646c8800-6cb0-11e7-8f15-beab00d46f03.gif) | ![reacher_fear](https://user-images.githubusercontent.com/306655/28396509-a0e5ed76-6cb0-11e7-98d4-08b7cd905706.gif) |
+| ![reacher_normal](https://user-images.githubusercontent.com/306655/28396465-646c8800-6cb0-11e7-8f15-beab00d46f03.gif) | ![reacher_opposite](https://user-images.githubusercontent.com/306655/28396509-a0e5ed76-6cb0-11e7-98d4-08b7cd905706.gif) |
 
 | Hopper Normal  | Hopper Backflip              |
 | -------------- | ---------------------------- |
