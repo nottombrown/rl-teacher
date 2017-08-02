@@ -28,7 +28,9 @@ Using human feedback directly as a reward function is prohibitively expensive fo
 1. A _reward predictor_ learns a reward function from human feedback. (See purple box in diagram below)
 2. A _reinforcement learning algorithm_ learns to take actions that optimize the predicted reward, using standard RL techniques. (In this repository we use PPO [Schulman et al., 2017], but any RL algorithm can be used).
 
-[diagram](https://blog.openai.com/content/images/2017/06/diagram-4.png)
+<p align="center">
+<img src="https://blog.openai.com/content/images/2017/06/diagram-4.png" />
+</p>
 
 For more details, see https://arxiv.org/abs/1706.03741
 
