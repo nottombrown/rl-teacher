@@ -77,8 +77,6 @@ Your tensorboard curves should look like the following:
 
 ![synth-graph](https://d2mxuefqeaa7sj.cloudfront.net/s_DD71AC3B56A62FB5EDB3FC2845498CE684AF55FAEBB10867B9073164786FB374_1500503616973_image.png)
 
-Notice that the agent reaches a score of `-5.0` in about 1000 training iterations when learning from just 700 datapoints of synthetic feedback, as compared to 800 timesteps when learning from the true reward function. This is a bit slower, but not much. This suggests that a few hundred datapoints of human feedback would be enough for the agent to learn a novel task of similar complexity.
-
 If you'd like to know exactly how synthetic labels are calculated, you can read the code in `SyntheticComparisonCollector`.
 
 ## Human labels
