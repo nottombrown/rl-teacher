@@ -53,7 +53,7 @@ Then run the following to install the rl-teacher code into your conda environmen
 
 Run the following command to do baseline reinforcement learning directly from the hard-coded reward function. This does not use human feedback at all, but is a good way to test that MuJoCo is working and that the RL agent is configured correctly and can learn successfully on its own.
 
-    python rl_teacher/teach.py -p rl -e Reacher-v1 -n base-rl
+    python rl_teacher/teach.py -p rl -e ShortHopper-v1 -n base-rl
 
 By default, this will write tensorboard files to `~/tb/rl-teacher/base-rl`. Start tensorboard as follows:
 
@@ -63,21 +63,22 @@ By default, this will write tensorboard files to `~/tb/rl-teacher/base-rl`. Star
 
 Navigate to http://0.0.0.0:6006 in a browser to view your learning curves, which should look like the following: 
 
-![rl-graph](https://user-images.githubusercontent.com/306655/28334197-4030f5ae-6baf-11e7-8913-48417f0e8285.png)
+![rl_graph](https://user-images.githubusercontent.com/306655/28930266-47bf7988-7827-11e7-907f-0d1e2d8a87f7.png)
 
 ## Synthetic labels
 
 Next we'll use the two-part training scheme (train a separate reward predictor, and use RL on the predicted reward), but instead of collecting genuine human feedback, we'll generate synthetic feedback from the reward function hard-coded into the environment. This provides us with another sanity check and a useful comparison of learning from the reward predictor versus learning from the true reward.
 
-Instead of `-p rl` above, we specify `-p synth` to use a synthetic predictor. We'll use the same environment (`-e Reacher-v1`), give this run a new name (`-n syn-700`), and ask for 700 total labels (`-l 700`).
+Instead of `-p rl` above, we specify `-p synth` to use a synthetic predictor. We'll use the same environment (`-e ShortHopper-v1`), give this run a new name (`-n syn-1400`), and ask for 1400 total labels (`-l 1400`).
 
-    python rl_teacher/teach.py -p synth -l 700 -e Reacher-v1 -n syn-700
+    python rl_teacher/teach.py -p synth -l 1400 -e ShortHopper-v1 -n syn-1400
 
-Your tensorboard curves should look like the following:
+Your tensorboard curves should look like the following (with learning from synthetic labels in brown):
 
-![synth-graph](https://d2mxuefqeaa7sj.cloudfront.net/s_DD71AC3B56A62FB5EDB3FC2845498CE684AF55FAEBB10867B9073164786FB374_1500503616973_image.png)
+![rl_and_synth_graph](https://user-images.githubusercontent.com/306655/28930393-ae011026-7827-11e7-9541-ca01c50c20ac.png)
 
-If you'd like to know exactly how synthetic labels are calculated, you can read the code in `SyntheticComparisonCollector`.
+If you'd like to know exactly how synthetic labels are calculated, you can read the code in `SyntheticComparisonCollector`. The system uses an exponentially decaying labeling rate that tangentially approaches the desired total number of labels:
+![labeling_rate](https://user-images.githubusercontent.com/306655/28930442-d6b23c02-7827-11e7-817c-71e74d8a55df.png)
 
 ## Human labels
 
