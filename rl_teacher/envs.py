@@ -209,6 +209,7 @@ def double_pendulum():
 
 def pendulum():
     from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
+
     # bonus = lambda a, data: np.concatenate([data.qpos, data.qvel]).ravel()[1] - 1.2
     def bonus(a, data):
         angle = data.qpos[1, 0]
