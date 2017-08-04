@@ -306,20 +306,12 @@ def main():
 
     # Wrap the predictor to capture videos every so often:
     if not args.no_videos:
-        predictor = SegmentVideoRecorder(predictor, env, save_dir=osp.join('/tmp/rl_teacher_vids', run_name), checkpoint_interval=100)
+        predictor = SegmentVideoRecorder(predictor, env, save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
     print("Starting joint training of predictor and agent")
-    if args.agent == "ga3c":
-        from multiprocessing import Queue
-        predictor.queue = Queue(100)
-
-        Ga3cConfig.ATARI_GAME = env
-        Ga3cConfig.AGENTS = args.workers
-        Ga3cConfig.REWARD_MODIFIER = predictor
-        Ga3cServer().main()
-    elif args.agent == "parallel_trpo":
+    if args.agent == "parallel_trpo":
         train_parallel_trpo(
             env_id=env_id,
             make_env=make_with_torque_removed,
