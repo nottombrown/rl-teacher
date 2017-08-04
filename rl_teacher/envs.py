@@ -3,7 +3,6 @@ from copy import copy
 import gym
 import numpy as np
 import scipy.misc as misc
-from gym.envs import mujoco
 from gym.wrappers.time_limit import TimeLimit
 
 class TransparentWrapper(gym.Wrapper):
@@ -173,21 +172,15 @@ def get_timesteps_per_episode(env):
         return get_timesteps_per_episode(env.env)
     return None
 
-def simple_reacher():
-    return limit(SimpleReacher(), 50)
-
-class SimpleReacher(mujoco.ReacherEnv):
-    def _step(self, a):
-        ob, _, done, info = super()._step(a)
-        return ob, info["reward_dist"], done, info
-
 def reacher(short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     env = mujoco.ReacherEnv()
     env = UseReward(env, reward_info_key="reward_dist")
     env = MjViewer(fps=10, env=env)
     return limit(t=20 if short else 50, env=env)
 
 def hopper(short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     bonus = lambda a, data: (data.qpos[1, 0] - 1) + 1e-3 * np.square(a).sum()
     env = mujoco.HopperEnv()
     env = MjViewer(fps=40, env=env)
@@ -196,6 +189,7 @@ def hopper(short=False):
     return env
 
 def humanoid(standup=True, short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     env = mujoco.HumanoidEnv()
     env = MjViewer(env, fps=40)
     env = UseReward(env, reward_info_key="reward_linvel")
@@ -205,6 +199,7 @@ def humanoid(standup=True, short=False):
     return limit(env, 300 if short else 1000)
 
 def double_pendulum():
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     bonus = lambda a, data: 10 * (data.site_xpos[0][2] - 1)
     env = mujoco.InvertedDoublePendulumEnv()
     env = MjViewer(env, fps=10)
@@ -213,6 +208,7 @@ def double_pendulum():
     return env
 
 def pendulum():
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     # bonus = lambda a, data: np.concatenate([data.qpos, data.qvel]).ravel()[1] - 1.2
     def bonus(a, data):
         angle = data.qpos[1, 0]
@@ -225,6 +221,7 @@ def pendulum():
     return env
 
 def cheetah(short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     env = mujoco.HalfCheetahEnv()
     env = UseReward(env, reward_info_key="reward_run")
     env = MjViewer(env, fps=20)
@@ -232,6 +229,7 @@ def cheetah(short=False):
     return env
 
 def swimmer(short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     env = mujoco.SwimmerEnv()
     env = UseReward(env, reward_info_key="reward_fwd")
     env = MjViewer(env, fps=40)
@@ -239,6 +237,7 @@ def swimmer(short=False):
     return env
 
 def ant(standup=True, short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     env = mujoco.AntEnv()
     env = UseReward(env, reward_info_key="reward_forward")
     env = MjViewer(env, fps=20)
@@ -249,6 +248,7 @@ def ant(standup=True, short=False):
     return env
 
 def walker(short=False):
+    from gym.envs import mujoco  # Import here to avoid forcing the user to have MuJoCo to run Teacher
     bonus = lambda a, data: data.qpos[1, 0] - 2.0 + 1e-3 * np.square(a).sum()
     env = mujoco.Walker2dEnv()
     env = MjViewer(env, fps=30)
