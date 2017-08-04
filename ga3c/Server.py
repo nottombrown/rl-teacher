@@ -125,15 +125,14 @@ class Server:
 
             if hasattr(Config, "REWARD_MODIFIER"):
                 if not Config.REWARD_MODIFIER.queue.empty():
-                    source_id, done, path, iteration = Config.REWARD_MODIFIER.queue.get()
+                    source_id, done, path = Config.REWARD_MODIFIER.queue.get()
                     rewards = Config.REWARD_MODIFIER.predict_reward(path)
 
                     if done and source_id == 1:
                         # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
-                        if hasattr(Config.REWARD_MODIFIER, 'path_callback'):
-                            print("BEFORE CALLBACK")
-                            Config.REWARD_MODIFIER.path_callback(path, iteration)
-                            print("AFTER CALLBACK")
+                        print("BEFORE CALLBACK")
+                        Config.REWARD_MODIFIER.path_callback(path)
+                        print("AFTER CALLBACK")
 
                     self.agents[source_id].wait_q.put(rewards)
 

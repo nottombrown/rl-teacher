@@ -82,7 +82,7 @@ class ProcessAgent(Process):
             action = np.random.choice(self.actions, p=prediction)
         return action
 
-    def run_episode(self, iteration):
+    def run_episode(self):
         self.env.reset()
         done = False
         experiences = []
@@ -116,7 +116,6 @@ class ProcessAgent(Process):
                 ################################
                 #  START REWARD MODIFICATIONS  #
                 ################################
-                original_rewards = [e.reward for e in experiences]
                 if hasattr(Config, "REWARD_MODIFIER"):
                     # Translate the experiences into the "path" that RL-Teacher expects
                     if len(path["obs"]) > 0:
@@ -131,10 +130,8 @@ class ProcessAgent(Process):
                     path["actions"] += [e.action for e in new_experiences]
                     path["human_obs"] += [e.human_obs for e in new_experiences]
 
-                    # Note: This "prediction" is a different kind than is used in A3C.
-                    # This is prediction by RL-Teacher of the "true" reward known by a human.
                     #  TODO SPEED UP!! THIS IS SLOWING THINGS DOWN! BECAUSE IT'S OPERATING ON THE WHOLE PATH!
-                    Config.REWARD_MODIFIER.queue.put((self.id, done, path, iteration))
+                    Config.REWARD_MODIFIER.queue.put((self.id, done, path))
                     path["rewards"] = self.wait_q.get()
 
                     # Translate new rewards back into the experiences
@@ -162,13 +159,10 @@ class ProcessAgent(Process):
         time.sleep(np.random.rand())
         np.random.seed(np.int32(time.time() % 1 * 1000 + self.id * 10))
 
-        iteration = 0
-
         while self.exit_flag.value == 0:
-            iteration += 1
             total_reward = 0
             total_length = 0
-            for x_, r_, a_, reward_sum in self.run_episode(iteration):
+            for x_, r_, a_, reward_sum in self.run_episode():
                 total_reward += reward_sum
                 total_length += len(r_) + 1  # +1 for last frame that we drop
                 self.training_q.put((x_, r_, a_))
