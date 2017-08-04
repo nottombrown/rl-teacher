@@ -128,7 +128,7 @@ class Server:
                     source_id, done, path = Config.REWARD_MODIFIER.queue.get()
                     rewards = Config.REWARD_MODIFIER.predict_reward(path)
 
-                    if done and source_id == 1:
+                    if done:
                         # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
                         print("BEFORE CALLBACK")
                         Config.REWARD_MODIFIER.path_callback(path)
