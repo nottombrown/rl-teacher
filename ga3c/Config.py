@@ -87,7 +87,7 @@ class Config:
     ANNEALING_EPISODE_COUNT = 400000
 
     # Entropy regualrization hyper-parameter
-    BETA_START = 0.01
+    BETA_START = 0.10
     BETA_END = 0.01
 
     # Learning rate

@@ -124,17 +124,21 @@ class Server:
                 self.stats.should_save_model.value = 0
 
             if hasattr(Config, "REWARD_MODIFIER"):
+                ################################
+                #  START REWARD MODIFICATIONS  #
+                ################################
                 if not Config.REWARD_MODIFIER.queue.empty():
                     source_id, done, path = Config.REWARD_MODIFIER.queue.get()
                     rewards = Config.REWARD_MODIFIER.predict_reward(path)
 
                     if done:
                         # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
-                        print("BEFORE CALLBACK")
                         Config.REWARD_MODIFIER.path_callback(path)
-                        print("AFTER CALLBACK")
 
                     self.agents[source_id].wait_q.put(rewards)
+                ################################
+                #   END REWARD MODIFICATIONS   #
+                ################################
 
             time.sleep(0.01)
 
