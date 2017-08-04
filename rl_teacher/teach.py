@@ -319,11 +319,11 @@ def main():
     print("Starting joint training of predictor and agent")
     if args.agent == "ga3c":
         from multiprocessing import Queue
-        wrapped_predictor.queue = Queue(100)
+        predictor.queue = Queue(100)
 
         Ga3cConfig.ATARI_GAME = env
         Ga3cConfig.AGENTS = args.workers
-        Ga3cConfig.REWARD_MODIFIER = wrapped_predictor
+        Ga3cConfig.REWARD_MODIFIER = predictor
         Ga3cServer().main()
     elif args.agent == "parallel_trpo":
         train_parallel_trpo(
