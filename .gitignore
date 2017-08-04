@@ -1,4 +1,5 @@
 *.sqlite3
+checkpoints/
 
 ### Python template
 # Byte-compiled / optimized / DLL files

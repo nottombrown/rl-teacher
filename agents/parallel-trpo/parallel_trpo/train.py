@@ -22,7 +22,7 @@ def print_stats(stats):
 
         print("{:38} {:>12}".format(k + ":", v))
 
-def train_parallel(
+def train_parallel_trpo(
         env_id,
         predictor,
         make_env=gym.make,
@@ -60,7 +60,7 @@ def train_parallel(
         rollouts.set_policy_weights(weights)
 
         # run a bunch of async processes that collect rollouts
-        paths, rollout_time = rollouts.rollout(timesteps_per_batch, iteration)
+        paths, rollout_time = rollouts.rollout(timesteps_per_batch)
 
         # learn from that data
         stats, learn_time = learner.learn(paths)

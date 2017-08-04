@@ -7,7 +7,8 @@ from time import time, sleep
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from parallel_trpo.train import train_parallel
+from parallel_trpo.train import train_parallel_trpo
+from pposgd_mpi.run_mujoco import train_pposgd_mpi
 from ga3c.Server import Server as Ga3cServer
 from ga3c.Config import Config as Ga3cConfig
 
@@ -20,7 +21,8 @@ from rl_teacher.video import SegmentVideoRecorder
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.segment_sampling import segments_from_rand_rollout
 from rl_teacher.summaries import AgentLogger, make_summary_writer
-from rl_teacher.utils import slugify
+from rl_teacher.utils import slugify, corrcoef
+from rl_teacher.video import SegmentVideoRecorder
 
 CLIP_LENGTH = 1.5
 
@@ -34,7 +36,10 @@ class TraditionalRLRewardPredictor(object):
         # self.agent_logger.log_episode(path)  <-- This causes problems for GA3C
         return path["original_rewards"]
 
-class ComparisonRewardPredictor(object):
+    def path_callback(self, path):
+        pass
+
+class ComparisonRewardPredictor():
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
 
     def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule):
@@ -47,7 +52,8 @@ class ComparisonRewardPredictor(object):
         self.recent_segments = deque(maxlen=200)  # Keep a queue of recently seen segments to pull new comparisons from
         self._frames_per_segment = CLIP_LENGTH * env.fps
         self._steps_since_last_training = 0
-        self._n_paths_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._n_timesteps_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._elapsed_predictor_training_iters = 0
 
         # Build and initialize our predictor model
         config = tf.ConfigProto(
@@ -148,7 +154,7 @@ class ComparisonRewardPredictor(object):
             })
         return q_value[0]
 
-    def path_callback(self, path, iteration):
+    def path_callback(self, path):
         path_length = len(path["obs"])
         self._steps_since_last_training += path_length
 
@@ -166,7 +172,7 @@ class ComparisonRewardPredictor(object):
                 random.choice(self.recent_segments))
 
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_paths_per_predictor_training):
+        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
             self.train_predictor()
             self._steps_since_last_training -= self._steps_since_last_training
 
@@ -190,6 +196,7 @@ class ComparisonRewardPredictor(object):
                 self.labels: labels,
                 K.learning_phase(): True
             })
+            self._elapsed_predictor_training_iters += 1
             self._write_training_summaries(loss)
 
     def _write_training_summaries(self, loss):
@@ -208,11 +215,9 @@ class ComparisonRewardPredictor(object):
             ep_reward_pred = np.sum(q_value, axis=1)
             reward_true = np.asarray([path['original_rewards'] for path in recent_paths])
             ep_reward_true = np.sum(reward_true, axis=1)
-            # Try to prevent np.corrcoef from blowing up on data with 0 variance
-            ep_reward_pred[0] += 1e-12
-            ep_reward_true[0] += 1e-12
-            self.agent_logger.log_simple("predictor/correlations", np.corrcoef(ep_reward_true, ep_reward_pred)[0, 1])
+            self.agent_logger.log_simple("predictor/correlations", corrcoef(ep_reward_true, ep_reward_pred))
 
+        self.agent_logger.log_simple("predictor/num_training_iters", self._elapsed_predictor_training_iters)
         self.agent_logger.log_simple("labels/desired_labels", self.label_schedule.n_desired_labels)
         self.agent_logger.log_simple("labels/total_comparisons", len(self.comparison_collector))
         self.agent_logger.log_simple(
@@ -228,9 +233,10 @@ def main():
     parser.add_argument('-w', '--workers', default=4, type=int)
     parser.add_argument('-l', '--n_labels', default=None, type=int)
     parser.add_argument('-L', '--pretrain_labels', default=None, type=int)
-    parser.add_argument('-t', '--num_timesteps', default=2e7, type=int)
+    parser.add_argument('-t', '--num_timesteps', default=5e6, type=int)
     parser.add_argument('-a', '--agent', default="ga3c", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
+    parser.add_argument('-V', '--no_videos', action="store_true")
     args = parser.parse_args()
 
     print("Setting things up...")
@@ -305,8 +311,8 @@ def main():
                 print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
-    wrapped_predictor = SegmentVideoRecorder(
-        predictor, env, checkpoint_interval=25, save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
+    if not args.no_videos:
+        predictor = SegmentVideoRecorder(predictor, env, save_dir=osp.join('/tmp/rl_teacher_vids', run_name))
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
@@ -320,10 +326,10 @@ def main():
         Ga3cConfig.REWARD_MODIFIER = wrapped_predictor
         Ga3cServer().main()
     elif args.agent == "parallel_trpo":
-        train_parallel(
+        train_parallel_trpo(
             env_id=env_id,
             make_env=make_with_torque_removed,
-            predictor=wrapped_predictor,
+            predictor=predictor,
             summary_writer=summary_writer,
             workers=args.workers,
             runtime=(num_timesteps / 1000),
@@ -332,6 +338,11 @@ def main():
             max_kl=0.001,
             seed=args.seed,
         )
+    elif args.agent == "pposgd_mpi":
+        def make_env():
+            return make_with_torque_removed(env_id)
+
+        train_pposgd_mpi(make_env, num_timesteps=num_timesteps, seed=args.seed, predictor=predictor)
     else:
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 
