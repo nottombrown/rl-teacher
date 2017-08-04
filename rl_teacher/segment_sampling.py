@@ -1,6 +1,7 @@
 import math
 from multiprocessing import Pool
 import numpy as np
+import gym.spaces.prng as space_prng
 
 from rl_teacher.envs import get_timesteps_per_episode
 
@@ -53,11 +54,13 @@ def do_rollout(env, action_function):
 def basic_segments_from_rand_rollout(
     env_id, make_env, n_desired_segments, clip_length_in_seconds,
     # These are only for use with multiprocessing
-    _verbose=True, _multiplier=1
+    seed=0, _verbose=True, _multiplier=1
 ):
     """ Generate a list of path segments by doing random rollouts. No multiprocessing. """
     segments = []
     env = make_env(env_id)
+    env.seed(seed)
+    space_prng.seed(seed)
     segment_length = int(clip_length_in_seconds * env.fps)
     while len(segments) < n_desired_segments:
         path = do_rollout(env, random_action)
@@ -84,7 +87,9 @@ def segments_from_rand_rollout(env_id, make_env, n_desired_segments, clip_length
     pool = Pool(processes=workers)
     segments_per_worker = int(math.ceil(n_desired_segments / workers))
     # One job per worker. Only the first worker is verbose.
-    jobs = [(env_id, make_env, segments_per_worker, clip_length_in_seconds, i == 0, workers) for i in range(workers)]
+    jobs = [
+        (env_id, make_env, segments_per_worker, clip_length_in_seconds, i, i == 0, workers)
+        for i in range(workers)]
     results = pool.starmap(basic_segments_from_rand_rollout, jobs)
     pool.close()
     return [segment for sublist in results for segment in sublist]
