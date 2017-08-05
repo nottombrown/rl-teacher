@@ -15,12 +15,11 @@ class SegmentVideoRecorder(object):
         self.save_dir = save_dir
 
         self._num_paths_seen = 0  # Internal counter of how many paths we've seen
-        self._counter = 0  # Internal counter of how many videos we've saved at a given iteration.
 
     def path_callback(self, path):
         if self._num_paths_seen % self.checkpoint_interval == 0:  # and self._num_paths_seen != 0:
-            fname = '%s/run_%s_%s.mp4' % (self.save_dir, self._num_paths_seen, self._counter)
-            print("Saving video of run %s_%s to %s" % (self._num_paths_seen, self._counter, fname))
+            fname = '%s/run_%s.mp4' % (self.save_dir, self._num_paths_seen)
+            print("Saving video of run %s to %s" % (self._num_paths_seen, fname))
             write_segment_to_video(path, fname, self.env)
         self._num_paths_seen += 1
 
@@ -32,6 +31,7 @@ class SegmentVideoRecorder(object):
 def write_segment_to_video(segment, fname, env):
     os.makedirs(osp.dirname(fname), exist_ok=True)
     frames = [env.render_full_obs(x) for x in segment["human_obs"]]
+    # Draw out the last frame by 0.2s
     for i in range(int(env.fps * 0.2)):
         frames.append(frames[-1])
     export_video(frames, fname, fps=env.fps)
@@ -42,11 +42,17 @@ def export_video(frames, fname, fps=10):
 
     raw_image = isinstance(frames[0], tuple)
     shape = frames[0][0] if raw_image else frames[0].shape
+    grayscale = (len(shape) == 2)
+    if grayscale:  # Grayscale
+        shape = shape + (3,)
     encoder = ImageEncoder(fname, shape, fps)
     for frame in frames:
         if raw_image:
             encoder.proc.stdin.write(frame[1])
         else:
+            if grayscale:
+                # Convert cells of domain [-1, 1) to triplets of range [0, 256)
+                frame = np.transpose(np.tile((frame + 1) * 128, (3, 1, 1)), (1, 2, 0)).astype(np.uint8)
             encoder.capture_frame(frame)
     encoder.close()
 
