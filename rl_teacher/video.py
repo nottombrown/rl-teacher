@@ -142,11 +142,3 @@ def upload_to_gcs(local_path, gcs_path):
 
     print("Copying media to %s in a background process" % gcs_path)
     subprocess.check_call(['gsutil', 'cp', local_path, gcs_path])
-
-if __name__ == '__main__':
-    bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-    assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must be set and start with gs://"
-
-    gcs_path = 'test_obs_75.mp4'
-    dest_path = osp.join(bucket, gcs_path)
-    upload_to_gcs('/tmp/rl_teacher_vids/test_obs_75.mp4', dest_path)

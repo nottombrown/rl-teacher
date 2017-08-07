@@ -289,9 +289,7 @@ def main():
         pretrain_segments = segments_from_rand_rollout(
             env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 2,
             clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
-
-        # Pull in our pretraining segments
-        for i in range(pretrain_labels):  # Turn our segments into comparisons
+        for i in range(pretrain_labels):  # Turn our random segments into comparisons
             comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
 
         # Sleep until the human has labeled most of the pretraining comparisons

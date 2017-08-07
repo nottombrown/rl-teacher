@@ -1,27 +1,21 @@
-import os
 import os.path as osp
 import uuid
 
-import rl_teacher.agent.trpo.run_trpo_mujoco
 from rl_teacher.envs import make_with_torque_removed
-from rl_teacher.segment_sampling import RandomRolloutSegmentCollector
+from rl_teacher.segment_sampling import segments_from_rand_rollout
+from rl_teacher.teach import CLIP_LENGTH
 from rl_teacher.video import write_segment_to_video
 
-def test_render_videos():
-    env = make_with_torque_removed("Hopper-v1")
-    collector = RandomRolloutSegmentCollector(20000, env=env)
-    rl_teacher.agent.trpo.run_trpo_mujoco.train(
-        num_timesteps=8000,
-        env=env,
-        seed=0,
-        predictor=collector,
-        random_rollout=True,
-    )
+TEST_RENDER_DIR = '/tmp/rl_teacher_media_test'
 
-    segments = collector.segments
-    tmp_media_dir = '/tmp/rl_teacher_media_test'
-    for segment in segments:
-        local_path = osp.join(tmp_media_dir, str(uuid.uuid4()) + '.mp4')
+def test_render_videos():
+    env_id = "Hopper-v1"
+    env = make_with_torque_removed(env_id)
+    segments = segments_from_rand_rollout(env_id, make_with_torque_removed,
+        n_desired_segments=1, clip_length_in_seconds=CLIP_LENGTH)
+
+    for idx, segment in enumerate(segments):
+        local_path = osp.join(TEST_RENDER_DIR, 'test-%s.mp4' % idx)
         print("Writing segment to: %s" % local_path)
         write_segment_to_video(
             segment,
