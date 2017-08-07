@@ -1,5 +1,7 @@
 *.sqlite3
 checkpoints/
+logs/
+results.txt
 
 ### Python template
 # Byte-compiled / optimized / DLL files
