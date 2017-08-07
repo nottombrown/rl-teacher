@@ -316,13 +316,9 @@ def main():
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
     print("Starting joint training of predictor and agent")
     if args.agent == "ga3c":
-        from multiprocessing import Queue
-        predictor.queue = Queue(100)
-
         Ga3cConfig.ATARI_GAME = env
         Ga3cConfig.AGENTS = args.workers
-        Ga3cConfig.REWARD_MODIFIER = predictor
-        Ga3cServer().main()
+        Ga3cServer(predictor).main()
     elif args.agent == "parallel_trpo":
         train_parallel_trpo(
             env_id=env_id,

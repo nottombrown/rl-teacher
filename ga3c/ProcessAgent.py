@@ -36,13 +36,14 @@ from ga3c.Experience import Experience
 
 
 class ProcessAgent(Process):
-    def __init__(self, id, prediction_q, training_q, episode_log_q):
+    def __init__(self, id, prediction_q, training_q, episode_log_q, reward_modifier_q=None):
         super(ProcessAgent, self).__init__()
 
         self.id = id
         self.prediction_q = prediction_q
         self.training_q = training_q
         self.episode_log_q = episode_log_q
+        self.reward_modifier_q = reward_modifier_q
 
         self.env = Environment()
         self.num_actions = self.env.get_num_actions()
@@ -116,7 +117,7 @@ class ProcessAgent(Process):
                 ################################
                 #  START REWARD MODIFICATIONS  #
                 ################################
-                if hasattr(Config, "REWARD_MODIFIER"):
+                if self.reward_modifier_q:
                     # Translate the experiences into the "path" that RL-Teacher expects
                     if len(path["obs"]) > 0:
                         # Cut off the first item in the list because it's from an old episode
@@ -131,7 +132,7 @@ class ProcessAgent(Process):
                     path["human_obs"] += [e.human_obs for e in new_experiences]
 
                     #  TODO SPEED UP!! THIS IS SLOWING THINGS DOWN! BECAUSE IT'S OPERATING ON THE WHOLE PATH!
-                    Config.REWARD_MODIFIER.queue.put((self.id, done, path))
+                    self.reward_modifier_q.put((self.id, done, path))
                     path["rewards"] = self.wait_q.get()
 
                     # Translate new rewards back into the experiences

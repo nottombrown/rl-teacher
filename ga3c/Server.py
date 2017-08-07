@@ -40,8 +40,12 @@ from ga3c.ThreadTrainer import ThreadTrainer
 
 
 class Server:
-    def __init__(self):
+    def __init__(self, reward_modifier=None):
         self.stats = ProcessStats()
+
+        if reward_modifier:
+            self.reward_modifier_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
+            self.reward_modifier = reward_modifier
 
         self.training_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
         self.prediction_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
@@ -59,8 +63,8 @@ class Server:
         self.dynamic_adjustment = ThreadDynamicAdjustment(self)
 
     def add_agent(self):
-        self.agents.append(
-            ProcessAgent(len(self.agents), self.prediction_q, self.training_q, self.stats.episode_log_q))
+        self.agents.append(ProcessAgent(
+            len(self.agents), self.prediction_q, self.training_q, self.stats.episode_log_q, self.reward_modifier_q))
         self.agents[-1].start()
 
     def remove_agent(self):
@@ -123,17 +127,17 @@ class Server:
                 self.save_model()
                 self.stats.should_save_model.value = 0
 
-            if hasattr(Config, "REWARD_MODIFIER"):
+            if self.reward_modifier:
                 ################################
                 #  START REWARD MODIFICATIONS  #
                 ################################
-                if not Config.REWARD_MODIFIER.queue.empty():
-                    source_id, done, path = Config.REWARD_MODIFIER.queue.get()
-                    rewards = Config.REWARD_MODIFIER.predict_reward(path)
+                if not self.reward_modifier_q.empty():
+                    source_id, done, path = self.reward_modifier_q.get()
+                    rewards = self.reward_modifier.predict_reward(path)
 
                     if done:
                         # TODO REFACTOR THE WHOLE CALLBACKS THING SO IT NO SUCK
-                        Config.REWARD_MODIFIER.path_callback(path)
+                        self.reward_modifier.path_callback(path)
 
                     self.agents[source_id].wait_q.put(rewards)
                 ################################
