@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import os.path as osp
 import uuid
+from time import sleep
 
 import numpy as np
 
@@ -137,12 +138,11 @@ class HumanComparisonCollector():
                 comparison['label'] = 'equal'
             # If we did not match, then there is no response yet, so we just move on
 
-        if verbose:
-            print("%s/%s comparisons labeled." % (
-                len(self.comparison_collector.labeled_comparisons), n_pretrain_labels))
+        if verbose and goal:
+            print("%s/%s comparisons labeled." % (len(self.labeled_comparisons), goal))
         if goal and len(self.labeled_comparisons) < int(goal * 0.75):
             if verbose:
-                print("Please add labels w/ the human-feedback-api. Sleeping... ")
+                print("Please add labels w/ the human-feedback-api. Sleeping...")
             # Sleep for a while to give the human opportunity to label comparisons
             sleep(5)
             # Recurse until the human has labeled most of the pretraining comparisons

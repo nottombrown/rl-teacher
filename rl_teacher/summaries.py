@@ -5,8 +5,6 @@ from collections import deque
 import numpy as np
 import tensorflow as tf
 
-from rl_teacher.teach import CLIP_LENGTH
-
 def make_summary_writer(name):
     logs_path = osp.expanduser('~/tb/rl-teacher/%s' % (name))
     return tf.summary.FileWriter(logs_path)

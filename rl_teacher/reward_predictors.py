@@ -1,11 +1,12 @@
 import random
 from collections import deque
+from time import sleep
 
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
 
-from rl_teacher.nn import FullyConnectedMLP
+from rl_teacher.nn import FullyConnectedMLP, SimpleConvolveObservationQNet
 from rl_teacher.segment_sampling import sample_segment_from_path
 from rl_teacher.utils import corrcoef
 
@@ -102,10 +103,11 @@ class ComparisonRewardPredictor(object):
             segement_alt_act = self.segment_alt_act_placeholder
 
         # A vanilla multi-layer perceptron maps a (state, action) pair to a reward (Q-value)
-        mlp = FullyConnectedMLP(self.obs_shape, self.act_shape)
+        # net = FullyConnectedMLP(self.obs_shape, self.act_shape)
+        net = SimpleConvolveObservationQNet(self.obs_shape, self.act_shape)
 
-        self.q_value = self._predict_rewards(self.segment_obs_placeholder, segment_act, mlp)
-        alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, segment_alt_act, mlp)
+        self.q_value = self._predict_rewards(self.segment_obs_placeholder, segment_act, net)
+        alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, segment_alt_act, net)
 
         # We use trajectory segments rather than individual (state, action) pairs because
         # video clips of segments are easier for humans to evaluate
@@ -168,7 +170,7 @@ class ComparisonRewardPredictor(object):
         # Start the actual training
         for i in range(pretrain_iters):
             self.train_predictor()  # Train on pretraining labels
-            if i % 100 == 0:
+            if i % 25 == 0:
                 print("%s/%s predictor pretraining iters... " % (i, pretrain_iters))
 
     def train_predictor(self):

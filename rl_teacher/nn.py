@@ -1,3 +1,5 @@
+from math import ceil
+
 import numpy as np
 import tensorflow as tf
 
@@ -26,13 +28,24 @@ class FullyConnectedMLP(object):
         x = tf.concat([flat_obs, act], axis=1)
         return self.model(x)
 
-class SimpleConvolveObservationQNet(object):
+class SimpleConvolveObservationQNet(FullyConnectedMLP):
     """
     Network that has two convolution steps on the observation space before flattening,
-    concatinating the action and being an MLP."""
+    concatinating the action and being an MLP.
+    """
 
     def __init__(self, obs_shape, act_shape, h_size=64):
-        pass
+        after_convolve_shape = (
+            int(ceil(ceil(obs_shape[0] / 4) / 3)),
+            int(ceil(ceil(obs_shape[1] / 4) / 3)),
+            8)
+        super().__init__(after_convolve_shape, act_shape, h_size)
 
     def run(self, obs, act):
-        pass
+        if len(obs.shape) == 3:
+            # Need to add channels
+            obs = tf.expand_dims(obs, axis=-1)
+        # Parameters taken from GA3C NetworkVP
+        c1 = tf.layers.conv2d(obs, 4, kernel_size=8, strides=4, padding="same", activation=tf.nn.relu)
+        c2 = tf.layers.conv2d(c1, 8, kernel_size=6, strides=3, padding="same", activation=tf.nn.relu)
+        return super().run(c2, act)
