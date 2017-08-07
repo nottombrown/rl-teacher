@@ -48,6 +48,7 @@ def make_comparison_predictor(env, env_id, experiment_name, predictor_type, summ
 
     return ComparisonRewardPredictor(
         env,
+        experiment_name,
         summary_writer,
         comparison_collector=comparison_collector,
         agent_logger=agent_logger,
@@ -68,6 +69,7 @@ def main():
     parser.add_argument('-a', '--agent', default="ga3c", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
+    parser.add_argument('-r', '--restore', action="store_true")
     args = parser.parse_args()
 
     print("Setting things up...")
@@ -91,7 +93,20 @@ def main():
             env_id, make_with_torque_removed, n_desired_segments=n_pretrain_labels * 2,
             clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
 
-        predictor.pretrain(n_pretrain_labels, pretrain_segments, args.pretrain_iters)
+        # Label pretrain segments
+        for i in range(n_pretrain_labels):  # Turn our random segments into comparisons
+            predictor.comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + n_pretrain_labels])
+        predictor.comparison_collector.label_unlabeled_comparisons(goal=n_pretrain_labels, verbose=True)
+
+        if args.restore:
+            predictor.load_model_from_checkpoint()
+            print("Reward model loaded from checkpoint!")
+        else:
+            # Pretrain predictor
+            for i in range(args.pretrain_iters):
+                predictor.train_predictor()  # Train on pretraining labels
+                if i % 25 == 0:
+                    print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
     # Wrap the predictor to capture videos every so often:
     if not args.no_videos:
@@ -100,6 +115,9 @@ def main():
 
     print("Starting joint training of predictor and agent")
     if args.agent == "ga3c":
+        Ga3cConfig.NETWORK_NAME = experiment_name
+        Ga3cConfig.SAVE_FREQUENCY = 200
+        Ga3cConfig.LOAD_CHECKPOINT = args.restore
         Ga3cConfig.ATARI_GAME = env
         Ga3cConfig.AGENTS = args.workers
         Ga3cServer(predictor).main()

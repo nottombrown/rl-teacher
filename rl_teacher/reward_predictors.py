@@ -1,3 +1,4 @@
+import os
 import random
 from collections import deque
 from time import sleep
@@ -17,7 +18,6 @@ class TraditionalRLRewardPredictor(object):
         self.agent_logger = AgentLogger(summary_writer)
 
     def predict_reward(self, path):
-        # self.agent_logger.log_episode(path)  <-- This causes problems for GA3C
         return path["original_rewards"]
 
     def path_callback(self, path):
@@ -26,18 +26,22 @@ class TraditionalRLRewardPredictor(object):
 class ComparisonRewardPredictor(object):
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
 
-    def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule, clip_length):
+    def __init__(self, env, experiment_name, summary_writer, comparison_collector, agent_logger, label_schedule, clip_length):
         self.summary_writer = summary_writer
         self.agent_logger = agent_logger
         self.comparison_collector = comparison_collector
         self.label_schedule = label_schedule
+        self.experiment_name = experiment_name
 
         # Set up some bookkeeping
         self.recent_segments = deque(maxlen=200)  # Keep a queue of recently seen segments to pull new comparisons from
         self._frames_per_segment = clip_length * env.fps
         self._steps_since_last_training = 0
+        self._steps_since_last_checkpoint = 0
         self._n_timesteps_per_predictor_training = 1e2  # How often should we train our predictor?
+        self._n_timesteps_per_checkpoint = 5e4  # How often should we save our model
         self._elapsed_predictor_training_iters = 0
+        self._num_checkpoints = 0
 
         # Build and initialize our predictor model
         config = tf.ConfigProto(
@@ -49,6 +53,8 @@ class ComparisonRewardPredictor(object):
         self.act_shape = (env.action_space.n,) if self.discrete_action_space else env.action_space.shape
         self.graph = self._build_model()
         self.sess.run(tf.global_variables_initializer())
+        my_vars = tf.global_variables()
+        self.saver = tf.train.Saver({var.name: var for var in my_vars}, max_to_keep=0)
 
     def _predict_rewards(self, obs_segments, act_segments, network):
         """
@@ -142,6 +148,7 @@ class ComparisonRewardPredictor(object):
     def path_callback(self, path):
         path_length = len(path["obs"])
         self._steps_since_last_training += path_length
+        self._steps_since_last_checkpoint += path_length
 
         self.agent_logger.log_episode(path)
 
@@ -151,27 +158,28 @@ class ComparisonRewardPredictor(object):
             self.recent_segments.append(segment)
 
         # If we need more comparisons, then we build them from our recent segments
-        if len(self.comparison_collector) < int(self.label_schedule.n_desired_labels):
+        if len(self.comparison_collector) < self.label_schedule.n_desired_labels:
             self.comparison_collector.add_segment_pair(
                 random.choice(self.recent_segments),
                 random.choice(self.recent_segments))
 
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
+        if self._steps_since_last_training >= self._n_timesteps_per_predictor_training:
             self.train_predictor()
-            self._steps_since_last_training -= self._steps_since_last_training
+            self._steps_since_last_training = 0
 
-    def pretrain(self, n_pretrain_labels, pretrain_segments, pretrain_iters):
-        for i in range(n_pretrain_labels):  # Turn our random segments into comparisons
-            self.comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + n_pretrain_labels])
+        # Save our predictor every X steps
+        if self._steps_since_last_checkpoint >= self._n_timesteps_per_checkpoint:
+            self._num_checkpoints += 1
+            self.saver.save(self.sess, self._checkpoint_filename())
+            self._steps_since_last_checkpoint = 0
 
-        self.comparison_collector.label_unlabeled_comparisons(goal=n_pretrain_labels, verbose=True)
+    def _checkpoint_filename(self):
+        return 'reward_model_checkpoints/comparison_predictor_%s/%08d' % (self.experiment_name, self._num_checkpoints)
 
-        # Start the actual training
-        for i in range(pretrain_iters):
-            self.train_predictor()  # Train on pretraining labels
-            if i % 25 == 0:
-                print("%s/%s predictor pretraining iters... " % (i, pretrain_iters))
+    def load_model_from_checkpoint(self):
+        filename = tf.train.latest_checkpoint(os.path.dirname(self._checkpoint_filename()))
+        self.saver.restore(self.sess, filename)
 
     def train_predictor(self):
         self.comparison_collector.label_unlabeled_comparisons()

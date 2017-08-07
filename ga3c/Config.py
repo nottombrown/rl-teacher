@@ -131,7 +131,7 @@ class Config:
     # Results filename
     RESULTS_FILENAME = 'results.txt'
     # Network checkpoint name
-    NETWORK_NAME = 'network'
+    NETWORK_NAME = 'ga3c_network'
 
     #########################################################################
     # More experimental parameters here

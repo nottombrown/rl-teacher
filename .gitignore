@@ -1,5 +1,6 @@
 *.sqlite3
 checkpoints/
+reward_model_checkpoints/
 logs/
 results.txt
 
