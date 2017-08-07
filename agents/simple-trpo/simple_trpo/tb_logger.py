@@ -2,8 +2,6 @@ import os.path as osp
 
 import tensorflow as tf
 
-CLIP_LENGTH = 1.5
-
 def add_simple_summary(summary_writer, tag, simple_value, step):
     summary_writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=simple_value)]), step)
 

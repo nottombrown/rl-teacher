@@ -5,7 +5,7 @@ from collections import deque
 import numpy as np
 import tensorflow as tf
 
-CLIP_LENGTH = 1.5
+from rl_teacher.teach import CLIP_LENGTH
 
 def make_summary_writer(name):
     logs_path = osp.expanduser('~/tb/rl-teacher/%s' % (name))
@@ -55,9 +55,9 @@ class AgentLogger(object):
 
         if self._timesteps_since_last_training >= self.timesteps_per_summary:
             self.summary_step += 1
-            if 'new' in path: # PPO puts multiple episodes into one path
+            if 'new' in path:  # PPO puts multiple episodes into one path
                 last_n_episode_scores = [np.sum(path["original_rewards"]).astype(float) / np.sum(path["new"])
-                    for path in self.last_n_paths]
+                                         for path in self.last_n_paths]
             else:
                 last_n_episode_scores = [np.sum(path["original_rewards"]).astype(float) for path in self.last_n_paths]
 
