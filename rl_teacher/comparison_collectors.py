@@ -36,9 +36,12 @@ class SyntheticComparisonCollector(object):
     def unlabeled_comparisons(self):
         return [comp for comp in self._comparisons if comp['label'] is None]
 
-    def label_unlabeled_comparisons(self):
+    def label_unlabeled_comparisons(self, goal=None, verbose=False):
+        # TODO: Handle "goal" parameter?
         for comp in self.unlabeled_comparisons:
             self._add_synthetic_label(comp)
+        if verbose:
+            print("%s synthetic labels generated... " % (len(self.labeled_comparisons)))
 
     @staticmethod
     def _add_synthetic_label(comparison):
@@ -121,7 +124,7 @@ class HumanComparisonCollector():
     def unlabeled_comparisons(self):
         return [comp for comp in self._comparisons if comp['label'] is None]
 
-    def label_unlabeled_comparisons(self):
+    def label_unlabeled_comparisons(self, goal=None, verbose=False):
         from human_feedback_api import Comparison
 
         for comparison in self.unlabeled_comparisons:
@@ -132,4 +135,15 @@ class HumanComparisonCollector():
                 comparison['label'] = 1
             elif db_comp.response == 'tie' or db_comp.response == 'abstain':
                 comparison['label'] = 'equal'
-                # If we did not match, then there is no response yet, so we just wait
+            # If we did not match, then there is no response yet, so we just move on
+
+        if verbose:
+            print("%s/%s comparisons labeled." % (
+                len(self.comparison_collector.labeled_comparisons), n_pretrain_labels))
+        if goal and len(self.labeled_comparisons) < int(goal * 0.75):
+            if verbose:
+                print("Please add labels w/ the human-feedback-api. Sleeping... ")
+            # Sleep for a while to give the human opportunity to label comparisons
+            sleep(5)
+            # Recurse until the human has labeled most of the pretraining comparisons
+            self.label_unlabeled_comparisons(goal, verbose)
