@@ -140,5 +140,5 @@ def upload_to_gcs(local_path, gcs_path):
     assert osp.isfile(local_path), "%s must be a file" % local_path
     assert gcs_path.startswith("gs://"), "%s must start with gs://" % gcs_path
 
-    print("Copying media to %s in a background process" % gcs_path)
-    subprocess.check_call(['gsutil', 'cp', local_path, gcs_path])
+    # print("Copying media to %s in a background process" % gcs_path)
+    subprocess.check_call(['gsutil', 'cp', local_path, gcs_path], stdout=open(os.devnull, 'wb'))

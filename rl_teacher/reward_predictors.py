@@ -175,7 +175,7 @@ class ComparisonRewardPredictor(object):
             self._steps_since_last_checkpoint = 0
 
     def _checkpoint_filename(self):
-        return 'reward_model_checkpoints/comparison_predictor_%s/%08d' % (self.experiment_name, self._num_checkpoints)
+        return 'checkpoints/reward_model/%s/%08d' % (self.experiment_name, self._num_checkpoints)
 
     def load_model_from_checkpoint(self):
         filename = tf.train.latest_checkpoint(os.path.dirname(self._checkpoint_filename()))

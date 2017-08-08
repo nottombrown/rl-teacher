@@ -68,7 +68,9 @@ class HumanComparisonCollector():
         self._upload_workers = multiprocessing.Pool(4)
 
         if Comparison.objects.filter(experiment_name=experiment_name).count() > 0:
-            raise EnvironmentError("Existing experiment named %s! Pick a new experiment name." % experiment_name)
+            print('DELETING ALL ASSOCIATED WEB DATA FOR EXPERIMENT "%s"' % experiment_name)
+            Comparison.objects.filter(experiment_name=experiment_name).delete()
+            # raise EnvironmentError("Existing experiment named %s! Pick a new experiment name." % experiment_name)
 
     def convert_segment_to_media_url(self, comparison_uuid, side, segment):
         tmp_media_dir = '/tmp/rl_teacher_media'

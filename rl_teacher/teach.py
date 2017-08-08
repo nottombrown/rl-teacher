@@ -80,6 +80,8 @@ def main():
     env = make_with_torque_removed(env_id)
     num_timesteps = int(args.num_timesteps)
 
+    os.makedirs('checkpoints/reward_model', exist_ok=True)
+
     # Make predictor
     if args.predictor == "rl":
         predictor = TraditionalRLRewardPredictor(summary_writer)
