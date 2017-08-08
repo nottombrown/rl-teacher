@@ -22,7 +22,7 @@ from rl_teacher.utils import slugify, corrcoef
 # TODO: Parameterize this.
 CLIP_LENGTH = 1.5
 
-def make_comparison_predictor(env, env_id, experiment_name, predictor_type, summary_writer, n_pretrain_labels, n_labels=None):
+def make_comparison_predictor(env, experiment_name, predictor_type, summary_writer, n_pretrain_labels, n_labels=None):
     agent_logger = AgentLogger(summary_writer)
 
     if n_labels:
@@ -42,7 +42,7 @@ def make_comparison_predictor(env, env_id, experiment_name, predictor_type, summ
         bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
         assert bucket, "you must specify a RL_TEACHER_GCS_BUCKET environment variable"
         assert bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
-        comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
+        comparison_collector = HumanComparisonCollector(env, experiment_name=experiment_name)
     else:
         raise ValueError("Bad value for --predictor: %s" % predictor_type)
 
@@ -88,7 +88,7 @@ def main():
     else:
         n_pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels // 4
         predictor = make_comparison_predictor(
-            env, env_id, experiment_name, args.predictor, summary_writer, n_pretrain_labels, args.n_labels)
+            env, experiment_name, args.predictor, summary_writer, n_pretrain_labels, args.n_labels)
 
         print("Starting random rollouts to generate pretraining segments. No learning will take place...")
         pretrain_segments = segments_from_rand_rollout(

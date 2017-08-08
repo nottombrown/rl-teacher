@@ -141,4 +141,5 @@ def upload_to_gcs(local_path, gcs_path):
     assert gcs_path.startswith("gs://"), "%s must start with gs://" % gcs_path
 
     # print("Copying media to %s in a background process" % gcs_path)
-    subprocess.check_call(['gsutil', 'cp', local_path, gcs_path], stdout=open(os.devnull, 'wb'))
+    # Use DEVNULL to mute output.
+    subprocess.check_call(['gsutil', 'cp', local_path, gcs_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -6,7 +6,6 @@ from time import sleep
 
 import numpy as np
 
-from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.video import write_segment_to_video, upload_to_gcs
 
 class SyntheticComparisonCollector(object):
@@ -53,17 +52,16 @@ class SyntheticComparisonCollector(object):
         # Mutate the comparison and give it the new label
         comparison['label'] = 0 if left_has_more_rew else 1
 
-def _write_and_upload_video(env_id, gcs_path, local_path, segment):
-    env = make_with_torque_removed(env_id)
+def _write_and_upload_video(env, gcs_path, local_path, segment):
     write_segment_to_video(segment, fname=local_path, env=env)
     upload_to_gcs(local_path, gcs_path)
 
 class HumanComparisonCollector():
-    def __init__(self, env_id, experiment_name):
+    def __init__(self, env, experiment_name):
         from human_feedback_api import Comparison
 
         self._comparisons = []
-        self.env_id = env_id
+        self.env = env
         self.experiment_name = experiment_name
         self._upload_workers = multiprocessing.Pool(4)
 
@@ -78,7 +76,7 @@ class HumanComparisonCollector():
         local_path = osp.join(tmp_media_dir, media_id)
         gcs_bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
         gcs_path = osp.join(gcs_bucket, media_id)
-        self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, gcs_path, local_path, segment))
+        self._upload_workers.apply_async(_write_and_upload_video, (self.env, gcs_path, local_path, segment))
 
         media_url = "https://storage.googleapis.com/%s/%s" % (gcs_bucket.lstrip("gs://"), media_id)
         return media_url
