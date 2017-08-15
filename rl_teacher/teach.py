@@ -97,29 +97,17 @@ class ComparisonRewardPredictor():
         self.segment_alt_obs_placeholder = tf.placeholder(
             dtype=tf.float32, shape=(None, None) + self.obs_shape, name="alt_obs_placeholder")
 
-        # Set up action placeholders
-        if self.discrete_action_space:
-            self.segment_act_placeholder = tf.placeholder(
-                dtype=tf.float32, shape=(None, None), name="act_placeholder")
-            self.segment_alt_act_placeholder = tf.placeholder(
-                dtype=tf.float32, shape=(None, None), name="alt_act_placeholder")
-            # Discrete actions need to become one-hot vectors for the model
-            segment_act = tf.one_hot(tf.cast(self.segment_act_placeholder, tf.int32), self.act_shape[0])
-            segment_alt_act = tf.one_hot(tf.cast(self.segment_alt_act_placeholder, tf.int32), self.act_shape[0])
-        else:
-            self.segment_act_placeholder = tf.placeholder(
-                dtype=tf.float32, shape=(None, None) + self.act_shape, name="act_placeholder")
-            self.segment_alt_act_placeholder = tf.placeholder(
-                dtype=tf.float32, shape=(None, None) + self.act_shape, name="alt_act_placeholder")
-            # Assume the actions are how we want them
-            segment_act = self.segment_act_placeholder
-            segement_alt_act = self.segment_alt_act_placeholder
+        self.segment_act_placeholder = tf.placeholder(
+            dtype=tf.float32, shape=(None, None) + self.act_shape, name="act_placeholder")
+        self.segment_alt_act_placeholder = tf.placeholder(
+            dtype=tf.float32, shape=(None, None) + self.act_shape, name="alt_act_placeholder")
+
 
         # A vanilla multi-layer perceptron maps a (state, action) pair to a reward (Q-value)
         mlp = FullyConnectedMLP(self.obs_shape, self.act_shape)
 
-        self.q_value = self._predict_rewards(self.segment_obs_placeholder, segment_act, mlp)
-        alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, segment_alt_act, mlp)
+        self.q_value = self._predict_rewards(self.segment_obs_placeholder, self.segment_act_placeholder, mlp)
+        alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, self.segment_alt_act_placeholder, mlp)
 
         # We use trajectory segments rather than individual (state, action) pairs because
         # video clips of segments are easier for humans to evaluate
