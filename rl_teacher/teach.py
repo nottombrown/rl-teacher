@@ -209,8 +209,8 @@ def main():
             comparison_collector = SyntheticComparisonCollector()
 
         elif args.predictor == "human":
-            bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-            assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
+            # bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
+            # assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
             comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
         else:
             raise ValueError("Bad value for --predictor: %s" % args.predictor)

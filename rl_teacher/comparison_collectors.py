@@ -49,10 +49,10 @@ class SyntheticComparisonCollector(object):
         # Mutate the comparison and give it the new label
         comparison['label'] = 0 if left_has_more_rew else 1
 
-def _write_and_upload_video(env_id, gcs_path, local_path, segment):
+def _write_and_upload_video(env_id, local_path, segment):
     env = make_with_torque_removed(env_id)
     write_segment_to_video(segment, fname=local_path, env=env)
-    upload_to_gcs(local_path, gcs_path)
+    # upload_to_gcs(local_path, gcs_path)
 
 class HumanComparisonCollector():
     def __init__(self, env_id, experiment_name):
@@ -70,11 +70,9 @@ class HumanComparisonCollector():
         tmp_media_dir = '/tmp/rl_teacher_media'
         media_id = "%s-%s.mp4" % (comparison_uuid, side)
         local_path = osp.join(tmp_media_dir, media_id)
-        gcs_bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-        gcs_path = osp.join(gcs_bucket, media_id)
-        self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, gcs_path, local_path, segment))
+        self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, local_path, segment))
 
-        media_url = "https://storage.googleapis.com/%s/%s" % (gcs_bucket.lstrip("gs://"), media_id)
+        media_url = "http://127.0.0.1:5000/%s" % (media_id)
         return media_url
 
     def _create_comparison_in_webapp(self, left_seg, right_seg):
