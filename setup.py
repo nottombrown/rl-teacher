@@ -18,6 +18,7 @@ setup(name='rl_teacher',
         'scipy',
         'ipdb',
         'keras',
+        'netifaces'
     ],
     # https://github.com/tensorflow/tensorflow/issues/7166#issuecomment-280881808
     extras_require={

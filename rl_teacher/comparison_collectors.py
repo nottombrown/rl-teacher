@@ -4,6 +4,7 @@ import os.path as osp
 import uuid
 
 import numpy as np
+import netifaces as ni
 
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.video import write_segment_to_video, upload_to_gcs
@@ -53,7 +54,10 @@ def _write_and_upload_video(env_id, local_path, segment):
     env = make_with_torque_removed(env_id)
     write_segment_to_video(segment, fname=local_path, env=env)
     # upload_to_gcs(local_path, gcs_path)
-
+def get_ip():
+    ni.ifaddresses('eth0')
+    ip = ni.ifaddresses('eth0')[ni.AF_INET][0]['addr']
+    return ip
 class HumanComparisonCollector():
     def __init__(self, env_id, experiment_name):
         from human_feedback_api import Comparison
@@ -71,8 +75,9 @@ class HumanComparisonCollector():
         media_id = "%s-%s.mp4" % (comparison_uuid, side)
         local_path = osp.join(tmp_media_dir, media_id)
         self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, local_path, segment))
+        local_ip=get_ip()
 
-        media_url = "http://127.0.0.1:5000/%s" % (media_id)
+        media_url = "http://%s:5000/%s" % (local_ip,media_id)
         return media_url
 
     def _create_comparison_in_webapp(self, left_seg, right_seg):
