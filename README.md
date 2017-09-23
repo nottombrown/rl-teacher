@@ -224,7 +224,9 @@ On the right are agents that were trained to do tricks based off human feedback;
 | -------------- | ---------------------------- |
 | ![ppo_cheetah_normal](https://user-images.githubusercontent.com/306655/28886801-9682c7a4-776f-11e7-8c28-8dd5b7f9b0e9.gif) | ![ppo_cheetah_hindleg](https://user-images.githubusercontent.com/306655/28886748-6c4a30c6-776f-11e7-84c5-2314835fc207.gif) |
 
+# Extensions to this work
 
+[rl-teacher-atari](https://github.com/machine-intelligence/rl-teacher-atari) by ([@raelifin](https://github.com/Raelifin)) supports atari environments, and uses a red-black tree to more efficiently find an ordering of human preferrences over clips.
 
 # Acknowledgments
 A huge thanks to Paul Christiano and Dario Amodei for the design of this system and for encouragement to make an open source version.  
