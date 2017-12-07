@@ -9,6 +9,12 @@
         <hr>
     </div>
     <div class="container">
+        <div style="text-align:center;margin:10px;">
+            <button onclick=window.location.href=window.location.origin+"/comparisons/"+({{feedback.id}}-1)>Prev</button>
+            <button style="margin-left:40px;" 
+                onclick=window.location.href=window.location.origin+"/experiments/{{feedback.experiment_name}}/list">List</button>
+            <button style="margin-left:40px;" onclick=window.location.href=window.location.origin+"/comparisons/"+({{feedback.id}}+1)>Next</button>
+        </div>
         <div class="row">
             <div class="col-md-6 text-center">
                 <h3>Left</h3>
@@ -39,9 +45,11 @@
                 <tr> <td> Responded at: </td> <td> {{feedback.responded_at}}</td> </tr>
                 <tr> <td> Priority: </td> <td> {{feedback.priority}}</td> </tr>
                 <tr> <td> Note: </td> <td> {{feedback.note}} </td> </tr>
+                <tr> <td> UUID: </td> <td> {{uuid}} </td> </tr>
                 <tr> <td> </td> <td> </td> </tr>
             </table>
             <hr>
         </div>
+
     </div>
 {% endblock %}

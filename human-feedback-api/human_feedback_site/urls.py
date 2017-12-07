@@ -14,6 +14,8 @@ urlpatterns = [
     url(r'^experiments/(.*)/list$', human_feedback_api.views.list_comparisons, name='list'),
     url(r'^comparisons/(.*)$', human_feedback_api.views.show_comparison, name='show_comparison'),
     url(r'^experiments/(.*)/ajax_response', human_feedback_api.views.ajax_response, name='ajax_response'),
+    url(r'^experiments/(.*)/ajax_one_response', human_feedback_api.views.ajax_one_response, name='ajax_one_response'),
+    url(r'^experiments/(.*)/(\d+)$', human_feedback_api.views.get_experiment, name='get_experiment'),
     url(r'^experiments/(.*)$', human_feedback_api.views.respond, name='responses'),
     url(r'^admin/', include(admin.site.urls)),
 ]
