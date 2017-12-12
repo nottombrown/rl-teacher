@@ -10,6 +10,7 @@ import gym
 from parallel_trpo.model import TRPO
 from parallel_trpo.rollouts import ParallelRollout
 
+
 def print_stats(stats):
     for k, v in stats.items():
         if 'time' in k.lower():
@@ -31,13 +32,14 @@ def train_parallel_trpo(
         make_env=gym.make,
         summary_writer=None,
         workers=1,
-        runtime=1800,
+        runtime=1800,                           # in seconds, NOT ms
         max_timesteps_per_episode=None,
         timesteps_per_batch=5000,
         max_kl=0.001,
         seed=0,
         discount_factor=0.995,
         cg_damping=0.1,
+        save_weights=False,
 ):
     # Tensorflow is not fork-safe, so we must use spawn instead
     # https://github.com/tensorflow/tensorflow/issues/5448#issuecomment-258934405
@@ -47,6 +49,7 @@ def train_parallel_trpo(
         os.environ['SET_PARALLEL_TRPO_START_METHOD'] = "1"
 
     run_indefinitely = (runtime <= 0)
+    print("4 >>> train.py: run_indefinitely=%r, runtime=%s sec" % (run_indefinitely, str(runtime)))
 
     if max_timesteps_per_episode is None:
         max_timesteps_per_episode = gym.spec(env_id).timestep_limit
@@ -60,7 +63,7 @@ def train_parallel_trpo(
     rollouts = ParallelRollout(env_id, make_env, predictor, workers, max_timesteps_per_episode, seed)
 
     iteration = 0
-    start_time = time()
+    start_time = time()     # time since epoch in seconds
 
     while run_indefinitely or time() < start_time + runtime:
         iteration += 1
@@ -98,5 +101,13 @@ def train_parallel_trpo(
                 tf.Summary.Value(tag="parallel_trpo/frames_gathered_per_second", simple_value=frames_gathered_per_second),
             ])
             summary_writer.add_summary(summary, global_step=iteration)
+
+        if save_weights and iteration % 50 == 0:
+            #  try to save weights
+            p = predictor.predictor if predictor.predictor else predictor
+            if p.save_weights:
+                p.save_weights(index=iteration) 
+
+
 
     rollouts.end()
