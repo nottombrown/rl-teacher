@@ -6,6 +6,7 @@ import subprocess
 
 import numpy as np
 from gym import error
+from rl_teacher.utils import tprint
 
 class SegmentVideoRecorder(object):
     def __init__(self, predictor, env, save_dir, checkpoint_interval=500):
@@ -134,5 +135,6 @@ def upload_to_gcs(local_path, gcs_path):
     assert osp.isfile(local_path), "%s must be a file" % local_path
     assert gcs_path.startswith("gs://"), "%s must start with gs://" % gcs_path
 
-    print("Copying media to %s in a background process" % gcs_path)
+    # print("Copying media to %s in a background process" % gcs_path)
+    tprint("Copying media to %s" % gcs_path)
     subprocess.check_call(['gsutil', 'cp', local_path, gcs_path])

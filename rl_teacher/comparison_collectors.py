@@ -3,10 +3,14 @@ import os
 import os.path as osp
 import uuid
 
+import re
 import numpy as np
+
+from django.conf import settings
 
 from rl_teacher.envs import make_with_torque_removed
 from rl_teacher.video import write_segment_to_video, upload_to_gcs
+from rl_teacher.utils import tprint
 
 class SyntheticComparisonCollector(object):
     def __init__(self):
@@ -52,29 +56,50 @@ class SyntheticComparisonCollector(object):
 def _write_and_upload_video(env_id, gcs_path, local_path, segment):
     env = make_with_torque_removed(env_id)
     write_segment_to_video(segment, fname=local_path, env=env)
-    upload_to_gcs(local_path, gcs_path)
+    serve_locally = settings.MEDIA_URL == '/media/'
+    if serve_locally or not gcs_path:
+        found = re.search(r'\/(\w{8}\-)',local_path)
+        tprint("media_url OK, path=",local_path, "             >>> ", found.group())
+    else:
+        upload_to_gcs(local_path, gcs_path)
+        found = re.search(r'\/(\w{8}\-)',gcs_path)
+        tprint("GCS upload OK, path=",gcs_path, "             >>> ", found.group())
 
 class HumanComparisonCollector():
-    def __init__(self, env_id, experiment_name):
+    def __init__(self, env_id, experiment_name, workers=4, reset=False, force=False):
         from human_feedback_api import Comparison
 
         self._comparisons = []
         self.env_id = env_id
         self.experiment_name = experiment_name
-        self._upload_workers = multiprocessing.Pool(4)
+        self.workers = workers
+        self._upload_workers = multiprocessing.Pool(self.workers)
 
         if Comparison.objects.filter(experiment_name=experiment_name).count() > 0:
-            raise EnvironmentError("Existing experiment named %s! Pick a new experiment name." % experiment_name)
+            if reset:
+                # delete existing experiment
+                Comparison.objects.filter(experiment_name=experiment_name).delete()
+            elif not force:
+                raise EnvironmentError("Existing experiment named %s! Pick a new experiment name." % experiment_name)
 
     def convert_segment_to_media_url(self, comparison_uuid, side, segment):
-        tmp_media_dir = '/tmp/rl_teacher_media'
+        # NOTE: make sure this matches settings.MEDIA_ROOT
+        # see: rl-teacher/human-feedback-api/human_feedback_site/settings.py
+
+        tmp_media_dir = settings.MEDIA_ROOT + self.experiment_name
         media_id = "%s-%s.mp4" % (comparison_uuid, side)
         local_path = osp.join(tmp_media_dir, media_id)
-        gcs_bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-        gcs_path = osp.join(gcs_bucket, media_id)
-        self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, gcs_path, local_path, segment))
+        serve_locally = settings.MEDIA_URL == '/media/'
+        if serve_locally:
+            self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, None, local_path, segment))
+            media_url = "/media/%s/%s" % (self.experiment_name, media_id)
+        else:
+            # serve segment from GCS
+            gcs_bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
+            gcs_path = osp.join(gcs_bucket, media_id)
+            self._upload_workers.apply_async(_write_and_upload_video, (self.env_id, gcs_path, local_path, segment))
+            media_url = "https://storage.googleapis.com/%s/%s" % (gcs_bucket.lstrip("gs://"), media_id)
 
-        media_url = "https://storage.googleapis.com/%s/%s" % (gcs_bucket.lstrip("gs://"), media_id)
         return media_url
 
     def _create_comparison_in_webapp(self, left_seg, right_seg):
@@ -120,7 +145,7 @@ class HumanComparisonCollector():
     @property
     def unlabeled_comparisons(self):
         return [comp for comp in self._comparisons if comp['label'] is None]
-
+        
     def label_unlabeled_comparisons(self):
         from human_feedback_api import Comparison
 

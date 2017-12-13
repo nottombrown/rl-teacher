@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse
+
 import pytz
 import json
 
@@ -75,7 +76,7 @@ def index(request):
 def list_comparisons(request, experiment_name):
     # comparisons = Comparison.objects.filter(experiment_name=experiment_name).order_by('responded_at', '-priority')
     comparisons = Comparison.objects.filter(experiment_name=experiment_name).order_by('responded_at', '-priority', 'created_at', 'id')
-    for c in comparisons: c.uuid=c.media_url_1.split('/')[4]
+    for c in comparisons: c.uuid=c.media_url_1.split('/').pop()
     return render(request, 'list.html', context=dict(comparisons=comparisons, experiment_name=experiment_name))
 
 def display_comparison(comparison):
@@ -116,8 +117,10 @@ def ajax_response(request, experiment_name):
 
 def show_comparison(request, comparison_id):
     comparison = get_object_or_404(Comparison, pk=comparison_id)
-    found = re.search(r'\/(\w{8}\-)',comparison.media_url_1)
-    return render(request, 'show_feedback.html', context={"feedback": comparison, "uuid": found.group() if found else ''})
+    uuid = comparison.media_url_1.split('/').pop()
+    uuid = uuid.split('-')
+    uuid = '-'.join(uuid[:5]) if len(uuid) >=5 else ''
+    return render(request, 'show_feedback.html', context={"feedback": comparison, "uuid": uuid })
 
 
 def respond(request, experiment_name):

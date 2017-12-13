@@ -10,6 +10,8 @@ from keras import backend as K
 from parallel_trpo.train import train_parallel_trpo
 from pposgd_mpi.run_mujoco import train_pposgd_mpi
 
+from django.conf import settings
+
 from rl_teacher.comparison_collectors import SyntheticComparisonCollector, HumanComparisonCollector
 from rl_teacher.envs import get_timesteps_per_episode
 from rl_teacher.envs import make_with_torque_removed
@@ -267,6 +269,8 @@ def main():
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
     parser.add_argument('--load_weights', default=None, type=str)
+    parser.add_argument('--content_server', default=None, type=str)
+
 
     args = parser.parse_args()
 
@@ -354,6 +358,14 @@ def main():
 
             # save predictor state to enable rerun from here
             tprint("2 >>> Saving pretraining weights to file=", predictor.saved_weights)
+
+        if args.content_server == "local":
+            settings.MEDIA_URL = '/media/'
+            settings.DEBUG = True
+        else: 
+            # default
+            settings.MEDIA_URL = 'https://storage.googleapis.com/'
+
 
     # Wrap the predictor to capture videos every so often:
     if not args.no_videos:

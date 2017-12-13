@@ -133,6 +133,14 @@
                 </div>
             </div>
         {% else %}
+            <div style="text-align:center;margin:10px;">
+                <h4>Browse Comparisons</h4>
+                <button onclick=window.location.href=window.location.origin+"/comparisons/"+({{comparison.id}}-1)>Prev</button>
+                <button style="margin-left:40px;" 
+                    onclick=window.location.href=window.location.origin+"/experiments/{{comparison.experiment_name}}/list">List</button>
+                <button style="margin-left:40px;" onclick=window.location.href=window.location.origin+"/comparisons/"+({{comparison.id}}+1)>Next</button>
+            </div>
+        
             <div class="comparison" comparison_id={{ comparison.id }}>
                 <div class="row">
                     <div class="col-md-6 text-center">
@@ -223,7 +231,8 @@
                 </div> <!-- comparison -->
             </div>
         {% endif %}
-    
+
+
     </div>
 
 {% endblock %}
