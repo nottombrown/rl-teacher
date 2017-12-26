@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from parallel_trpo.train import train_parallel_trpo
+from parallel_trpo.model import TRPO
 from pposgd_mpi.run_mujoco import train_pposgd_mpi
 
 from django.conf import settings
@@ -65,8 +66,8 @@ class ComparisonRewardPredictor():
         self.discrete_action_space = not hasattr(env.action_space, "shape")
         self.act_shape = (env.action_space.n,) if self.discrete_action_space else env.action_space.shape
         self.keras_NN = None
-        # self.saved_weights: file_name for last save of Predictor weights
-        self.saved_weights = None
+        # self.predictor_weights: file_name for last save of Predictor weights
+        self.predictor_weights = None
         self.graph = self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
@@ -139,23 +140,24 @@ class ComparisonRewardPredictor():
         # 
         return tf.get_default_graph()
 
-    def save_weights(self, file_name=None, index=None):
-        if self.keras_NN:
-            if not index:
-                index = int(time())
-            if not file_name and self.experiment_name:
-                file_name = self.experiment_name
-            if file_name and file_name.find("_weights")<0:
-                file_name += "_weights" 
-            if file_name:
-                file_name += "." + str(index) + ".h5"
-                # save weights for Predictor
-                self.keras_NN.model.save_weights(file_name)
-                self.saved_weights = file_name
-        # 
-        # TODO: add save/restore weights for Q function approximator
-        # self.sess = tf.InteractiveSession(config=config)
-        #
+    def save_weights(self, index=None, policy=None):
+        if not index:
+            index = int(time())
+        file_name = self.experiment_name
+
+        if self.comparison_collector.learn_predictor and self.keras_NN:
+            predictor_name = "%s.predictor_weights.%d.h5" % (self.experiment_name, index)
+            # save weights for Predictor
+            self.keras_NN.model.save_weights(predictor_name)
+            self.predictor_weights = predictor_name
+
+        if policy and isinstance(policy, TRPO):
+            policy_name = "%s.policy_weights.%d.ckpt" % (self.experiment_name, index)
+            # save TRPO weights for reloading
+            policy_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) +"/"+ policy_name
+            save_path = policy.save_policy(file_name=policy_name)
+        
+        return predictor_name
 
 
     def load_weights(self, file_name):
@@ -191,8 +193,14 @@ class ComparisonRewardPredictor():
                 random.choice(self.recent_segments),
                 random.choice(self.recent_segments))
 
+
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
+        # -- unless we are using a pre-trained reward predictor
+        is_learn_predictor = self.comparison_collector.learn_predictor
+        if (
+            is_learn_predictor 
+            and self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training)
+        ):
             #
             # BUG: during learning phase
             # ValueError: Cannot feed value of shape (0,) for Tensor 'alt_act_placeholder:0', which has shape '(?, ?, 6)'
@@ -206,6 +214,10 @@ class ComparisonRewardPredictor():
 
         minibatch_size = min(64, len(self.comparison_collector.labeled_decisive_comparisons))
         labeled_comparisons = random.sample(self.comparison_collector.labeled_decisive_comparisons, minibatch_size)
+        if len(labeled_comparisons)==0:
+            # BUG ValueError: Cannot feed value of shape (0,) for Tensor 'alt_act_placeholder:0', which has shape '(?, ?, 6)'
+            return
+
         # tprint("5 >>> labeled_comparisons, len=", len(labeled_comparisons))
         left_obs = np.asarray([comp['left']['obs'] for comp in labeled_comparisons])
         left_acts = np.asarray([comp['left']['actions'] for comp in labeled_comparisons])
@@ -268,7 +280,9 @@ def main():
     parser.add_argument('-a', '--agent', default="parallel_trpo", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
-    parser.add_argument('--load_weights', default=None, type=str)
+    parser.add_argument('--load_predictor_weights', default=None, type=str)
+    parser.add_argument('--train_predictor', default=None, type=int)
+    parser.add_argument('--load_policy_weights', default=None, type=str)
     parser.add_argument('--content_server', default=None, type=str)
 
 
@@ -290,7 +304,7 @@ def main():
     else:
         agent_logger = AgentLogger(summary_writer)
 
-        pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels // 4
+        pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels or 1
 
         if args.n_labels:
             label_schedule = LabelAnnealer(
@@ -307,11 +321,16 @@ def main():
 
         elif args.predictor == "human":
             bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-            assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
-            comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name
+            if args.content_server != "local":
+                assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
+
+            comparison_collector = HumanComparisonCollector(
+                env_id
+                , experiment_name=experiment_name
                 , force=True
                 , reset=False
                 )
+
         else:
             raise ValueError("Bad value for --predictor: %s" % args.predictor)
 
@@ -323,41 +342,55 @@ def main():
             label_schedule=label_schedule,
             experiment_name=experiment_name,
         )
-        if args.load_weights:
-            loadFile = args.load_weights
-            loadFile = predictor.load_weights(loadFile)
-            tprint("0 >>> Loading pretrained weights, file=", loadFile)
-            # still need some comparisons???
+
+
+
+
+        if args.load_predictor_weights:
+            ### load pre-trained weights for reward predictor 
+            loadFile = predictor.load_weights(args.load_predictor_weights)
+            tprint("0 >>> Loading pre-trained weights for reward predictor, file=", loadFile)
+
+            ### NOTE: continue to learn the reward predictor when using pre-trained weights???
+            comparison_collector.learn_predictor = not args.load_predictor_weights if args.train_predictor is None else args.train_predictor
+            print("0 >>> train reward predictor=", comparison_collector.learn_predictor)
+
+        else:
+            ### NOTE: randomly initialize reward predictor and learn from pretrain_labels
             pretrain_labels = max(20, pretrain_labels)
+            tprint("0 >>> Starting random rollouts to generate pretraining segments. No learning will take place...")
+            pretrain_segments = segments_from_rand_rollout(
+                env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 2,
+                clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
+            for i in range(pretrain_labels):  # Turn our random segments into comparisons
+                comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
 
-        tprint("0 >>> Starting random rollouts to generate pretraining segments. No learning will take place...")
-        pretrain_segments = segments_from_rand_rollout(
-            env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 2,
-            clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
-        for i in range(pretrain_labels):  # Turn our random segments into comparisons
-            comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
+            # Sleep until the human has labeled most of the pretraining comparisons
+            tprint("1 >>> wait for pretraining labels")
+            while len(comparison_collector.labeled_comparisons) < int(pretrain_labels * 0.75):         
+                comparison_collector.label_unlabeled_comparisons()
+                if args.predictor == "synth":
+                    print("%s synthetic labels generated... " % (len(comparison_collector.labeled_comparisons)))
+                elif args.predictor == "human":
+                    print("%s/%s comparisons labeled. Please add labels w/ the human-feedback-api. Sleeping... " % (len(comparison_collector.labeled_comparisons), pretrain_labels))
+                    sleep(5)
 
-        # Sleep until the human has labeled most of the pretraining comparisons
-        tprint("1 >>> wait for pretraining labels")
-        while len(comparison_collector.labeled_comparisons) < int(pretrain_labels * 0.75):         
-            comparison_collector.label_unlabeled_comparisons()
-            if args.predictor == "synth":
-                print("%s synthetic labels generated... " % (len(comparison_collector.labeled_comparisons)))
-            elif args.predictor == "human":
-                print("%s/%s comparisons labeled. Please add labels w/ the human-feedback-api. Sleeping... " % (len(comparison_collector.labeled_comparisons), pretrain_labels))
-                sleep(5)
-
-        if not args.load_weights:
             # Start the actual learning from pretraining
             tprint("2 >>> predictor pretraining, iters=%s " % (args.pretrain_iters))
             for i in range(args.pretrain_iters):
                 name = experiment_name + "-pretrain"
-                predictor.train_predictor(save_weights=True)  # Train on pretraining labels
+                predictor.train_predictor(save_weights=False)  # Train on pretraining labels
                 if i % 100 == 0:
                     tprint("2 >>> %s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
 
             # save predictor state to enable rerun from here
-            tprint("2 >>> Saving pretraining weights to file=", predictor.saved_weights)
+            predictor.save_weights()  # Train on pretraining labels
+            tprint("2 >>> Saving pretraining weights to file=", predictor.predictor_weights)
+
+
+        ### NOTE: load pre-trained weights for agent, TRPO policy predictor
+        policyFile = args.load_policy_weights or None
+
 
         if args.content_server == "local":
             settings.MEDIA_URL = '/media/'
@@ -386,6 +419,7 @@ def main():
             timesteps_per_batch=8000,
             max_kl=0.001,
             seed=args.seed,
+            load_weights=policyFile,
             save_weights=True,
         )
     elif args.agent == "pposgd_mpi":

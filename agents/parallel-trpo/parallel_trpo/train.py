@@ -10,6 +10,7 @@ import gym
 from parallel_trpo.model import TRPO
 from parallel_trpo.rollouts import ParallelRollout
 
+from rl_teacher.video import SegmentVideoRecorder
 
 def print_stats(stats):
     for k, v in stats.items():
@@ -39,6 +40,7 @@ def train_parallel_trpo(
         seed=0,
         discount_factor=0.995,
         cg_damping=0.1,
+        load_weights=False,
         save_weights=False,
 ):
     # Tensorflow is not fork-safe, so we must use spawn instead
@@ -64,6 +66,8 @@ def train_parallel_trpo(
 
     iteration = 0
     start_time = time()     # time since epoch in seconds
+    if load_weights:
+        learner.load_policy(load_weights)
 
     while run_indefinitely or time() < start_time + runtime:
         iteration += 1
@@ -102,12 +106,26 @@ def train_parallel_trpo(
             ])
             summary_writer.add_summary(summary, global_step=iteration)
 
-        if save_weights and iteration % 50 == 0:
-            #  try to save weights
-            p = predictor.predictor if predictor.predictor else predictor
-            if p.save_weights:
-                p.save_weights(index=iteration) 
+        checkpoint = iteration % 40 == 0
+        ### NOTE: checkpoint after 20*200 rollouts
+        if checkpoint:
+            predictor.save_weights(index=iteration, policy=learner)
+                    
+            ### NOTE: if we are not learning predictor, then save rollout for review from webapp
+            p = predictor.predictor  # className=ComparisonRewardPredictor
+            is_learn_predictor = p.comparison_collector.learn_predictor
+            if not is_learn_predictor and isinstance(predictor, SegmentVideoRecorder):
 
+                ### ???: why do they use "original_rewards" instead of "rewards"
+                sorted_by_rewards = sorted(paths, key=lambda k: np.array(k["original_rewards"]).sum(), reverse=True)
+                # save video segment
+                best_path = sorted_by_rewards[0]
+                worst_path = sorted_by_rewards[-1]
+                print("best_path, type=", str(type(best_path)))  # list()
+                for key in best_path:
+                    print("best_path: " + str(key) + ", type=", str(type(best_path[key])))
+                
+                p.comparison_collector.add_segment_pair(worst_path, best_path, force_webapp=True)
 
 
     rollouts.end()

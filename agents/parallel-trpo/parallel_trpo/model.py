@@ -1,3 +1,4 @@
+import os
 import multiprocessing
 from collections import OrderedDict
 from time import clock as time
@@ -74,6 +75,10 @@ class TRPO(object):
         )
         self.session = tf.Session(config=config)
         self.session.run(tf.global_variables_initializer())
+
+        ### save/restore policy model 
+        self.saver = tf.train.Saver()
+
         # value function
         # self.vf = VF(self.session)
         self.vf = LinearVF()
@@ -102,6 +107,22 @@ class TRPO(object):
     def get_policy(self):
         op = [var for var in self.policy_vars if 'policy' in var.name]
         return self.session.run(op)
+
+    ### save/load policy network to continue RL exploitation/exploration
+    #       typically using pre-trained reward predictor 
+    def save_policy(self, file_name=None):
+        print( ">>> TRPO.save_policy(), file=" , file_name)
+        assert file_name and file_name.endswith(".ckpt"), "ERROR: policy weight file must end with `._policy_weights.ckpt`"
+        assert file_name.find(".policy_weights")>0, "ERROR: policy weight file must end with `._policy_weights.ckpt`"
+        save_path = self.saver.save(self.session, file_name)
+        return save_path
+
+    def load_policy(self, file_name):
+        index_file = "%s.index" % (file_name)
+        if os.path.exists(index_file) and os.path.isfile(index_file):        
+            self.saver.restore(self.session, file_name)
+            print( "4 >>> TRPO.load_policy(), file=" , file_name)
+
 
     def learn(self, paths):
         start_time = time()
