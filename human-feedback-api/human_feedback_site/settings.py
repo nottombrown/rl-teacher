@@ -24,7 +24,7 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 SECRET_KEY = 'i+acxn5(akgsn!sr4^qgf(^m&*@+g1@u^t@=8s@axc41ml*f=s'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 # Application definition
 
@@ -88,7 +88,8 @@ DATABASES = {
 
 LANGUAGE_CODE = 'en-us'
 # TIME_ZONE = 'UTC'
-TIME_ZONE = 'US/Pacific'
+# TIME_ZONE = 'US/Pacific'
+TIME_ZONE = 'Asia/Kuala_Lumpur'
 
 USE_I18N = True
 USE_L10N = True
@@ -109,6 +110,10 @@ ALLOWED_HOSTS = ['*']
 
 STATIC_ROOT = os.path.join(PROJECT_ROOT, 'staticfiles')
 STATIC_URL = '/static/'
+
+# MEDIA_ROOT = os.path.join(PROJECT_ROOT, 'media/')
+MEDIA_ROOT = '/tmp/rl_teacher_media/'
+MEDIA_URL = '/media/'
 
 # Extra places for collectstatic to find static files.
 STATICFILES_DIRS = (

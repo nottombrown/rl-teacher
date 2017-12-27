@@ -19,3 +19,9 @@ def corrcoef(dist_a, dist_b):
     dist_a[0] += 1e-12
     dist_b[0] += 1e-12
     return np.corrcoef(dist_a, dist_b)[0, 1]
+
+
+import time
+starttime = int(time.time())
+def tprint(*args, **kwargs):
+    print(*args, "  @" + str(int(time.time())-starttime) +"s", **kwargs)

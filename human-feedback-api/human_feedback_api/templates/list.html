@@ -14,20 +14,21 @@
             <th> responded_at</th>
             <th> priority</th>
             <th> response</th>
+            <th> media UUID</th>
         </tr>
         </thead>
         <tbody>
         {% for comparison in comparisons %}
-            <tr>
-                <td><a href="/comparisons/{{ comparison.id }}">{{ comparison.id }}</a></td>
+            <tr> 
+                <td><a href="/experiments/{{experiment_name}}/{{ comparison.id }}">{{ comparison.id }}</a></td>
                 <td>{{ comparison.created_at }}</td>
                 <td>{{ comparison.responded_at }}</td>
                 <td>{{ comparison.priority }}</td>
                 <td>{{ comparison.response }}</td>
-            </tr>
+                <td>{{ comparison.uuid }} </td>
+            </tr> 
         {% endfor %}
         </tbody>
     </table>
-
 
 {% endblock %}

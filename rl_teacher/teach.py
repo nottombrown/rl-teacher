@@ -8,7 +8,10 @@ import numpy as np
 import tensorflow as tf
 from keras import backend as K
 from parallel_trpo.train import train_parallel_trpo
+from parallel_trpo.model import TRPO
 from pposgd_mpi.run_mujoco import train_pposgd_mpi
+
+from django.conf import settings
 
 from rl_teacher.comparison_collectors import SyntheticComparisonCollector, HumanComparisonCollector
 from rl_teacher.envs import get_timesteps_per_episode
@@ -20,6 +23,7 @@ from rl_teacher.segment_sampling import segments_from_rand_rollout
 from rl_teacher.summaries import AgentLogger, make_summary_writer
 from rl_teacher.utils import slugify, corrcoef
 from rl_teacher.video import SegmentVideoRecorder
+from rl_teacher.utils import tprint
 
 CLIP_LENGTH = 1.5
 
@@ -39,11 +43,12 @@ class TraditionalRLRewardPredictor(object):
 class ComparisonRewardPredictor():
     """Predictor that trains a model to predict how much reward is contained in a trajectory segment"""
 
-    def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule):
+    def __init__(self, env, summary_writer, comparison_collector, agent_logger, label_schedule, experiment_name=None):
         self.summary_writer = summary_writer
         self.agent_logger = agent_logger
         self.comparison_collector = comparison_collector
         self.label_schedule = label_schedule
+        self.experiment_name = experiment_name
 
         # Set up some bookkeeping
         self.recent_segments = deque(maxlen=200)  # Keep a queue of recently seen segments to pull new comparisons from
@@ -60,6 +65,9 @@ class ComparisonRewardPredictor():
         self.obs_shape = env.observation_space.shape
         self.discrete_action_space = not hasattr(env.action_space, "shape")
         self.act_shape = (env.action_space.n,) if self.discrete_action_space else env.action_space.shape
+        self.keras_NN = None
+        # self.predictor_weights: file_name for last save of Predictor weights
+        self.predictor_weights = None
         self.graph = self._build_model()
         self.sess.run(tf.global_variables_initializer())
 
@@ -104,7 +112,7 @@ class ComparisonRewardPredictor():
 
 
         # A vanilla multi-layer perceptron maps a (state, action) pair to a reward (Q-value)
-        mlp = FullyConnectedMLP(self.obs_shape, self.act_shape)
+        self.keras_NN = mlp = FullyConnectedMLP(self.obs_shape, self.act_shape)
 
         self.q_value = self._predict_rewards(self.segment_obs_placeholder, self.segment_act_placeholder, mlp)
         alt_q_value = self._predict_rewards(self.segment_alt_obs_placeholder, self.segment_alt_act_placeholder, mlp)
@@ -126,8 +134,37 @@ class ComparisonRewardPredictor():
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
         self.train_op = tf.train.AdamOptimizer().minimize(self.loss_op, global_step=global_step)
-
+        #
+        # TODO: using Q-value function approx, qhat(S,A,w), w=weights for Q-value function
+        # ???: where is this?
+        # 
         return tf.get_default_graph()
+
+    def save_weights(self, index=None, policy=None):
+        if not index:
+            index = int(time())
+        file_name = self.experiment_name
+
+        if self.comparison_collector.learn_predictor and self.keras_NN:
+            predictor_name = "%s.predictor_weights.%d.h5" % (self.experiment_name, index)
+            # save weights for Predictor
+            self.keras_NN.model.save_weights(predictor_name)
+            self.predictor_weights = predictor_name
+
+        if policy and isinstance(policy, TRPO):
+            policy_name = "%s.policy_weights.%d.ckpt" % (self.experiment_name, index)
+            # save TRPO weights for reloading
+            policy_name = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) +"/"+ policy_name
+            save_path = policy.save_policy(file_name=policy_name)
+        
+        return predictor_name
+
+
+    def load_weights(self, file_name):
+        if self.keras_NN:
+            assert file_name and file_name.endswith(".h5"), "ERROR: weight file must end with `.h5`"
+            self.keras_NN.model.load_weights(file_name)
+            return file_name
 
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
@@ -156,21 +193,39 @@ class ComparisonRewardPredictor():
                 random.choice(self.recent_segments),
                 random.choice(self.recent_segments))
 
+
         # Train our predictor every X steps
-        if self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training):
+        # -- unless we are using a pre-trained reward predictor
+        is_learn_predictor = self.comparison_collector.learn_predictor
+        if (
+            is_learn_predictor 
+            and self._steps_since_last_training >= int(self._n_timesteps_per_predictor_training)
+        ):
+            #
+            # BUG: during learning phase
+            # ValueError: Cannot feed value of shape (0,) for Tensor 'alt_act_placeholder:0', which has shape '(?, ?, 6)'
+            # FIX: add some pretraining data. caused by [] dataset
+            # 
             self.train_predictor()
             self._steps_since_last_training -= self._steps_since_last_training
 
-    def train_predictor(self):
+    def train_predictor(self, save_weights=False):
         self.comparison_collector.label_unlabeled_comparisons()
 
         minibatch_size = min(64, len(self.comparison_collector.labeled_decisive_comparisons))
         labeled_comparisons = random.sample(self.comparison_collector.labeled_decisive_comparisons, minibatch_size)
+        if len(labeled_comparisons)==0:
+            # BUG ValueError: Cannot feed value of shape (0,) for Tensor 'alt_act_placeholder:0', which has shape '(?, ?, 6)'
+            return
+
+        # tprint("5 >>> labeled_comparisons, len=", len(labeled_comparisons))
         left_obs = np.asarray([comp['left']['obs'] for comp in labeled_comparisons])
         left_acts = np.asarray([comp['left']['actions'] for comp in labeled_comparisons])
         right_obs = np.asarray([comp['right']['obs'] for comp in labeled_comparisons])
         right_acts = np.asarray([comp['right']['actions'] for comp in labeled_comparisons])
+        # tprint("5 >>> observations, actions, len=", len(left_obs), len(left_acts), len(right_obs), len(right_acts))
         labels = np.asarray([comp['label'] for comp in labeled_comparisons])
+        # tprint("5 >>> labels, len=", len(labels))
 
         with self.graph.as_default():
             _, loss = self.sess.run([self.train_op, self.loss_op], feed_dict={
@@ -183,6 +238,9 @@ class ComparisonRewardPredictor():
             })
             self._elapsed_predictor_training_iters += 1
             self._write_training_summaries(loss)
+
+        if save_weights:
+            self.save_weights()
 
     def _write_training_summaries(self, loss):
         self.agent_logger.log_simple("predictor/loss", loss)
@@ -222,6 +280,12 @@ def main():
     parser.add_argument('-a', '--agent', default="parallel_trpo", type=str)
     parser.add_argument('-i', '--pretrain_iters', default=10000, type=int)
     parser.add_argument('-V', '--no_videos', action="store_true")
+    parser.add_argument('--load_predictor_weights', default=None, type=str)
+    parser.add_argument('--train_predictor', default=None, type=int)
+    parser.add_argument('--load_policy_weights', default=None, type=str)
+    parser.add_argument('--content_server', default=None, type=str)
+
+
     args = parser.parse_args()
 
     print("Setting things up...")
@@ -240,7 +304,7 @@ def main():
     else:
         agent_logger = AgentLogger(summary_writer)
 
-        pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels // 4
+        pretrain_labels = args.pretrain_labels if args.pretrain_labels else args.n_labels or 1
 
         if args.n_labels:
             label_schedule = LabelAnnealer(
@@ -257,8 +321,16 @@ def main():
 
         elif args.predictor == "human":
             bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-            assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
-            comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
+            if args.content_server != "local":
+                assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
+
+            comparison_collector = HumanComparisonCollector(
+                env_id
+                , experiment_name=experiment_name
+                , force=True
+                , reset=False
+                )
+
         else:
             raise ValueError("Bad value for --predictor: %s" % args.predictor)
 
@@ -268,30 +340,65 @@ def main():
             comparison_collector=comparison_collector,
             agent_logger=agent_logger,
             label_schedule=label_schedule,
+            experiment_name=experiment_name,
         )
 
-        print("Starting random rollouts to generate pretraining segments. No learning will take place...")
-        pretrain_segments = segments_from_rand_rollout(
-            env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 2,
-            clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
-        for i in range(pretrain_labels):  # Turn our random segments into comparisons
-            comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
 
-        # Sleep until the human has labeled most of the pretraining comparisons
-        while len(comparison_collector.labeled_comparisons) < int(pretrain_labels * 0.75):
-            comparison_collector.label_unlabeled_comparisons()
-            if args.predictor == "synth":
-                print("%s synthetic labels generated... " % (len(comparison_collector.labeled_comparisons)))
-            elif args.predictor == "human":
-                print("%s/%s comparisons labeled. Please add labels w/ the human-feedback-api. Sleeping... " % (
-                    len(comparison_collector.labeled_comparisons), pretrain_labels))
-                sleep(5)
 
-        # Start the actual training
-        for i in range(args.pretrain_iters):
-            predictor.train_predictor()  # Train on pretraining labels
-            if i % 100 == 0:
-                print("%s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
+
+        if args.load_predictor_weights:
+            ### load pre-trained weights for reward predictor 
+            loadFile = predictor.load_weights(args.load_predictor_weights)
+            tprint("0 >>> Loading pre-trained weights for reward predictor, file=", loadFile)
+
+            ### NOTE: continue to learn the reward predictor when using pre-trained weights???
+            comparison_collector.learn_predictor = not args.load_predictor_weights if args.train_predictor is None else args.train_predictor
+            print("0 >>> train reward predictor=", comparison_collector.learn_predictor)
+
+        else:
+            ### NOTE: randomly initialize reward predictor and learn from pretrain_labels
+            pretrain_labels = max(20, pretrain_labels)
+            tprint("0 >>> Starting random rollouts to generate pretraining segments. No learning will take place...")
+            pretrain_segments = segments_from_rand_rollout(
+                env_id, make_with_torque_removed, n_desired_segments=pretrain_labels * 2,
+                clip_length_in_seconds=CLIP_LENGTH, workers=args.workers)
+            for i in range(pretrain_labels):  # Turn our random segments into comparisons
+                comparison_collector.add_segment_pair(pretrain_segments[i], pretrain_segments[i + pretrain_labels])
+
+            # Sleep until the human has labeled most of the pretraining comparisons
+            tprint("1 >>> wait for pretraining labels")
+            while len(comparison_collector.labeled_comparisons) < int(pretrain_labels * 0.75):         
+                comparison_collector.label_unlabeled_comparisons()
+                if args.predictor == "synth":
+                    print("%s synthetic labels generated... " % (len(comparison_collector.labeled_comparisons)))
+                elif args.predictor == "human":
+                    print("%s/%s comparisons labeled. Please add labels w/ the human-feedback-api. Sleeping... " % (len(comparison_collector.labeled_comparisons), pretrain_labels))
+                    sleep(5)
+
+            # Start the actual learning from pretraining
+            tprint("2 >>> predictor pretraining, iters=%s " % (args.pretrain_iters))
+            for i in range(args.pretrain_iters):
+                name = experiment_name + "-pretrain"
+                predictor.train_predictor(save_weights=False)  # Train on pretraining labels
+                if i % 100 == 0:
+                    tprint("2 >>> %s/%s predictor pretraining iters... " % (i, args.pretrain_iters))
+
+            # save predictor state to enable rerun from here
+            predictor.save_weights()  # Train on pretraining labels
+            tprint("2 >>> Saving pretraining weights to file=", predictor.predictor_weights)
+
+
+        ### NOTE: load pre-trained weights for agent, TRPO policy predictor
+        policyFile = args.load_policy_weights or None
+
+
+        if args.content_server == "local":
+            settings.MEDIA_URL = '/media/'
+            settings.DEBUG = True
+        else: 
+            # default
+            settings.MEDIA_URL = 'https://storage.googleapis.com/'
+
 
     # Wrap the predictor to capture videos every so often:
     if not args.no_videos:
@@ -299,7 +406,7 @@ def main():
 
     # We use a vanilla agent from openai/baselines that contains a single change that blinds it to the true reward
     # The single changed section is in `rl_teacher/agent/trpo/core.py`
-    print("Starting joint training of predictor and agent")
+    tprint("3 >>> Starting joint training of predictor and agent, runtime=", num_timesteps)
     if args.agent == "parallel_trpo":
         train_parallel_trpo(
             env_id=env_id,
@@ -307,11 +414,13 @@ def main():
             predictor=predictor,
             summary_writer=summary_writer,
             workers=args.workers,
-            runtime=(num_timesteps / 1000),
+            runtime=(num_timesteps),
             max_timesteps_per_episode=get_timesteps_per_episode(env),
             timesteps_per_batch=8000,
             max_kl=0.001,
             seed=args.seed,
+            load_weights=policyFile,
+            save_weights=True,
         )
     elif args.agent == "pposgd_mpi":
         def make_env():
