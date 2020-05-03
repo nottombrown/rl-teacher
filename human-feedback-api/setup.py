@@ -3,10 +3,10 @@ from setuptools import setup
 setup(name='human_feedback_api',
     version='0.0.1',
     install_requires=[
-        'Django',
+        'Django ~= 1.1',
         'dj_database_url',
         'gunicorn',
-        'whitenoise',
+        'whitenoise ~= 3.0',
         'ipython',
     ]
 )
