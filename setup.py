@@ -8,6 +8,7 @@ if sys.version_info.major != 3:
 
 setup(name='rl_teacher',
     version='0.0.1',
+    py_modules=['rl_teacher'],
     install_requires=[
         # 'mujoco-py ~=0.5.7',
         # 'gym[mujoco]',
