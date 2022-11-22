@@ -4,6 +4,7 @@ import gym
 import numpy as np
 from gym.envs import mujoco
 from gym.wrappers.time_limit import TimeLimit
+from packaging import version
 
 class TransparentWrapper(gym.Wrapper):
     """Passes missing attributes through the wrapper stack"""
@@ -24,26 +25,30 @@ class MjViewer(TransparentWrapper):
         super().__init__(env)
 
     def _get_full_obs(self):
-        return (copy(self.env.model.data.qpos[:, 0]), copy(self.env.model.data.qvel[:, 0]))
+        return (copy(self.env.data.qpos), copy(self.env.data.qvel))
 
     def _set_full_obs(self, obs):
-        qpos, qvel = obs[0], obs[1]
-        self.env.set_state(qpos, qvel)
+        self.env.set_state(*obs) # qpos, qvel
 
     def render_full_obs(self, full_obs):
         old_obs = self._get_full_obs()
         self._set_full_obs(full_obs)
-        self._get_viewer().render()
-        data, width, height = self._get_viewer().get_image()
-        result = ((width, height, 3), data)
+        self._get_viewer("human").render()
+        data = self._get_viewer("human")._read_pixels_as_in_window()
+        result = data
         self._set_full_obs(old_obs)
         return result
 
-    def _step(self, a):
+    def step(self, a):
         human_obs = self._get_full_obs()
-        ob, reward, done, info = self.env._step(a)
-        info["human_obs"] = human_obs
-        return ob, reward, done, info
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            ob, reward, done, info = self.env.step(a)
+            info["human_obs"] = human_obs
+            return ob, reward, done, info
+        else:
+            ob, reward, terminate, truncated, info = self.env.step(a)
+            info["human_obs"] = human_obs
+            return ob, reward, terminate, truncated, info
 
 class UseReward(TransparentWrapper):
     """Use a reward other than the normal one for an environment.
@@ -55,8 +60,12 @@ class UseReward(TransparentWrapper):
         super().__init__(env)
 
     def _step(self, a):
-        ob, reward, done, info = super()._step(a)
-        return ob, info[self.reward_info_key], done, info
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            ob, reward, done, info = super()._step(a)
+            return ob, info[self.reward_info_key], done, info
+        else:
+            ob, reward, terminate, truncated, info = super()._step(a)
+            return ob, info[self.reward_info_key], terminate, truncated, info
 
 class NeverDone(TransparentWrapper):
     """Environment that never returns a done signal"""
@@ -66,11 +75,18 @@ class NeverDone(TransparentWrapper):
         super().__init__(env)
 
     def _step(self, a):
-        ob, reward, done, info = super()._step(a)
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            ob, reward, done, info = super()._step(a)
+        else:
+            ob, reward, terminate, truncated, info = super()._step(a)
         bonus = self.bonus(a, self.env.model.data)
         reward = reward + bonus
         done = False
-        return ob, reward, done, info
+
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            return ob, reward, done, info
+        else:
+            return ob, reward, terminate, truncated, info
 
 class TimeLimitTransparent(TimeLimit, TransparentWrapper):
     pass
@@ -124,8 +140,12 @@ def simple_reacher():
 
 class SimpleReacher(mujoco.ReacherEnv):
     def _step(self, a):
-        ob, _, done, info = super()._step(a)
-        return ob, info["reward_dist"], done, info
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            ob, _, done, info = super()._step(a)
+            return ob, info["reward_dist"], done, info
+        else:
+            ob, _, terminate, truncated, info = super()._step(a)
+            return ob, info["reward_dist"], terminate, truncated, info
 
 def reacher(short=False):
     env = mujoco.ReacherEnv()

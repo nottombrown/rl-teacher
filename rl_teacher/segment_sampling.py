@@ -1,7 +1,9 @@
 import math
 from multiprocessing import Pool
 import numpy as np
-import gym.spaces.prng as space_prng
+import gym
+from packaging import version
+# import gym.spaces.prng as space_prng
 
 from rl_teacher.envs import get_timesteps_per_episode
 
@@ -39,13 +41,20 @@ def do_rollout(env, action_function):
     """ Builds a path by running through an environment using a provided function to select actions. """
     obs, rewards, actions, human_obs = [], [], [], []
     max_timesteps_per_episode = get_timesteps_per_episode(env)
-    ob = env.reset()
+    if version.parse(gym.__version__) < version.parse("0.26.0"):
+        ob = env.reset()
+    else:
+        ob, info = env.reset()
     # Primary environment loop
     for i in range(max_timesteps_per_episode):
         action = action_function(env, ob)
         obs.append(ob)
         actions.append(action)
-        ob, rew, done, info = env.step(action)
+        if version.parse(gym.__version__) < version.parse("0.26.0"):
+            ob, rew, done, info = env.step(action)
+        else:
+            ob, rew, terminate, truncated, info = env.step(action)
+            done = terminate or truncated
         rewards.append(rew)
         human_obs.append(info.get("human_obs"))
         if done:
@@ -66,8 +75,11 @@ def basic_segments_from_rand_rollout(
     """ Generate a list of path segments by doing random rollouts. No multiprocessing. """
     segments = []
     env = make_env(env_id)
-    env.seed(seed)
-    space_prng.seed(seed)
+    if version.parse(gym.__version__) < version.parse("0.26.0"):
+        env.seed(seed)
+    # space_prng.seed(seed)
+    np.random.seed(seed)
+    np.random.seed()
     segment_length = int(clip_length_in_seconds * env.fps)
     while len(segments) < n_desired_segments:
         path = do_rollout(env, random_action)
