@@ -18,7 +18,7 @@ setup(name='pposgd_mpi',
         'zmq',
         'dill',
         'progressbar2',
-        'mpi4py ~= 2.0.0'
+        # 'mpi4py ~= 2.0.0'
     ],
     # https://github.com/tensorflow/tensorflow/issues/7166#issuecomment-280881808
     extras_require={
