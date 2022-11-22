@@ -49,7 +49,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.security.SecurityMiddleware',
 
     # ADD
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 )
 MIDDLEWARE = MIDDLEWARE_CLASSES # modify
 
