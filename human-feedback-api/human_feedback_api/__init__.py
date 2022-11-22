@@ -6,7 +6,8 @@ from human_feedback_site import settings as site_settings
 
 def initialize():
     try:
-        settings.configure(**site_settings.__dict__)
+        conf = {k:v for k,v in site_settings.__dict__.items() if k.isupper()}
+        settings.configure(**conf)
         django.setup()
     except RuntimeError:
         logging.warning("Tried to double configure the API, ignore this if running the Django app directly")

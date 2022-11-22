@@ -10,7 +10,6 @@ https://docs.djangoproject.com/en/1.8/ref/settings/
 """
 
 import os
-
 import dj_database_url
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -77,14 +76,17 @@ WSGI_APPLICATION = 'human_feedback_site.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
 
-database_location = os.environ.get("RL_TEACHER_DB", os.path.join(BASE_DIR, 'db.sqlite3'))
-sqlite_db = {
+DTATBASE_LOCATION = os.environ.get("RL_TEACHER_DB", os.path.join(BASE_DIR, 'db.sqlite3'))
+# database_location = os.environ.get("RL_TEACHER_DB", os.path.join(BASE_DIR, 'db.sqlite3'))
+
+# sqlite_db = {
+SQLITE_DB = {
     'ENGINE': 'django.db.backends.sqlite3',
-    'NAME': os.path.expanduser(database_location)
+    'NAME': os.path.expanduser(DTATBASE_LOCATION)
 }
 
 DATABASES = {
-    'default': sqlite_db
+    'default': SQLITE_DB
 }
 
 # Internationalization
@@ -99,8 +101,9 @@ USE_L10N = True
 USE_TZ = True
 
 # Update database configuration with $DATABASE_URL.
-db_from_env = dj_database_url.config(conn_max_age=500)
-DATABASES['default'].update(db_from_env)
+DB_FROM_ENV = dj_database_url.config(conn_max_age=500)
+# db_from_env = dj_database_url.config(conn_max_age=500)
+DATABASES['default'].update(DB_FROM_ENV)
 
 # Honor the 'X-Forwarded-Proto' header for request.is_secure()
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
@@ -122,4 +125,4 @@ STATICFILES_DIRS = (
 # Simplified static file serving.
 # https://warehouse.python.org/project/whitenoise/
 # STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+STATICFILE_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
