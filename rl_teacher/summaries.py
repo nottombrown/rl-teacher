@@ -9,10 +9,11 @@ CLIP_LENGTH = 1.5
 
 def make_summary_writer(name):
     logs_path = osp.expanduser('~/tb/rl-teacher/%s' % (name))
-    return tf.summary.FileWriter(logs_path)
+    with tf.compat.v1.Graph().as_default():
+        return tf.compat.v1.summary.FileWriter(logs_path)
 
 def add_simple_summary(summary_writer, tag, simple_value, step):
-    summary_writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag=tag, simple_value=simple_value)]), step)
+    summary_writer.add_summary(tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag=tag, simple_value=simple_value)]), step)
 
 def _pad_with_end_state(path, desired_length):
     # Assume path length is at least 1.

@@ -22,6 +22,6 @@ class FullyConnectedMLP(object):
         self.model.add(Dense(1))
 
     def run(self, obs, act):
-        flat_obs = tf.contrib.layers.flatten(obs)
+        flat_obs = tf.compat.v1.layers.flatten(obs)
         x = tf.concat([flat_obs, act], axis=1)
         return self.model(x)
