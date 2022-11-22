@@ -9,8 +9,8 @@ if sys.version_info.major != 3:
 setup(name='rl_teacher',
     version='0.0.1',
     install_requires=[
-        'mujoco-py ~=0.5.7',
-        'gym[mujoco]',
+        # 'mujoco-py ~=0.5.7',
+        # 'gym[mujoco]',
         'tqdm',
         'matplotlib',
         'ipython',

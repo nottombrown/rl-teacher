@@ -9,9 +9,9 @@ if sys.version_info.major != 3:
 setup(name='pposgd_mpi',
     version='0.0.1',
     install_requires=[
-        'mujoco-py ~=0.5.7',
-        'gym>=0.9.1[mujoco]',
-        'mujoco-py',
+        # 'mujoco-py ~=0.5.7',
+        # 'gym>=0.9.1[mujoco]',
+        # 'mujoco-py',
         'scipy',
         'tqdm',
         'joblib',
