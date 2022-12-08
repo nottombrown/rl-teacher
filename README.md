@@ -32,7 +32,23 @@ Together with a set of integrations to [OpenAI gym](https://github.com/openai/gy
 </p>
 
 
-## Installation
+## Quick install
+
+### Dependencies
+
+> # pip dependencies
+> Django ~= 3.2.16  
+> dj_database_url ~= 1.0.0  
+> whitenoise ~= 6.2.0  
+> mujoco-py ~= 2.1.2.14  
+> gym ~= 0.26.0  
+> tensorflow >= 2.11.0
+  
+> # conda dependencies
+> mesalib ~= 21.2.5
+> glew ~= 2.1.0
+
+### Installation
 
 Obtain a license for [MuJoCo](https://www.roboti.us/license.html) and install the [binaries](https://www.roboti.us/index.html) on your system. For good documentation on MuJoCo installation, and an easy way to test that MuJoCo is working on your system, we recommend following the mujoco-py installation.
 
