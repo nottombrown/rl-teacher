@@ -34,7 +34,7 @@ class MjViewer(TransparentWrapper):
         old_obs = self._get_full_obs()
         self._set_full_obs(full_obs)
         # Why can't we use rgb_array
-        result = self._get_viewer("rgb_array").render()
+        # result = self._get_viewer("rgb_array").render()
         self._get_viewer("human").render()
         data = self._get_viewer("human")._read_pixels_as_in_window()
         result = data
