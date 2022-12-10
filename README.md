@@ -249,4 +249,7 @@ A huge thanks to Paul Christiano and Dario Amodei for the design of this system 
 
 Max Harms ([@raelifin](https://github.com/Raelifin)) wrote substantial portions of the system. Max integrated and tuned the parellized TRPO implementation, added many additional features and improvements, and trained the picturesque Walker Ballerina featured prominently in this repo.
 
-Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).
+Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).  
+
+
+Thank you for all members of the Deepest season 12 who support this project.
