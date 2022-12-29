@@ -1,3 +1,14 @@
+{% load static %}
+
+
+<!-- <div class="comparison" style="margin-top: 20px">
+    <h1>RL Teacher</h1>
+    <video width="400px" loop>
+        <source src="{% static 'media/test-0.mp4' %}" type="video/mp4"/>
+    </video>
+    <p>Live training of AI agents</p>
+</div> -->
+
 {% if comparison == None %}
     <div class="comparison last" comparison_id={{-1 }}>
         <div class="container" style="margin-top: 60px">
@@ -12,12 +23,18 @@
         <div class="row">
             <div class="col-md-6 text-center">
                 <h3>Left</h3>
-                {% if ".mp4" in comparison.media_url_1 %}
+                {% if comparison.local %}
                     <video width="400px" loop>
-                        <source src="{{ comparison.media_url_1 }}" type="video/mp4"/>
+                        <source src="{% static 'media/' %}{{ comparison.media_url_1 }}" type="video/mp4"/>
                     </video>
                 {% else %}
-                    <img style="width:400px" src="{{ comparison.media_url_1 }}">
+                    {% if ".mp4" in comparison.media_url_1 %}
+                        <video width="400px" loop>
+                            <source src="{{ comparison.media_url_1 }}" type="video/mp4"/>
+                        </video>
+                    {% else %}
+                        <img style="width:400px" src="{{ comparison.media_url_1 }}">
+                    {% endif %}
                 {% endif %}
 
                 <form style="padding-top:30px"
@@ -32,12 +49,18 @@
             </div>
             <div class="col-md-6 text-center">
                 <h3>Right</h3>
-                {% if ".mp4" in comparison.media_url_2 %}
+                {% if comparison.local %}
                     <video width="400px" loop>
-                        <source src="{{ comparison.media_url_2 }}" type="video/mp4"/>
+                        <source src="{% static 'media/' %}{{ comparison.media_url_2 }}" type="video/mp4"/>
                     </video>
                 {% else %}
-                    <img style="width:400px" src="{{ comparison.media_url_2 }}">
+                    {% if ".mp4" in comparison.media_url_2 %}
+                        <video width="400px" loop>
+                            <source src="{{ comparison.media_url_1 }}" type="video/mp4"/>
+                        </video>
+                    {% else %}
+                        <img style="width:400px" src="{{ comparison.media_url_2 }}">
+                    {% endif %}
                 {% endif %}
 
                 <form style="padding-top:30px"

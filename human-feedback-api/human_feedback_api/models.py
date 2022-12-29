@@ -1,6 +1,6 @@
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 
 RESPONSE_KIND_TO_RESPONSES_OPTIONS = {'left_or_right': ['left', 'right', 'tie', 'abstain']}
 
@@ -22,6 +22,8 @@ class Comparison(models.Model):
         validators=[validate_inclusion_of_response_kind])
     response = models.TextField('the response from the tasker', db_index=True, blank=True, null=True)
     experiment_name = models.TextField('name of experiment')
+
+    local = models.BooleanField(default=False)
 
     priority = models.FloatField('site will display higher priority items first', db_index=True)
     note = models.TextField('note to be displayed along with the query', default="", blank=True)

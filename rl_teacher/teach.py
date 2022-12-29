@@ -9,8 +9,8 @@ from pyvirtualdisplay import Display
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from parallel_trpo.train import train_parallel_trpo
-from pposgd_mpi.run_mujoco import train_pposgd_mpi
+from agents.parallel_trpo.train import train_parallel_trpo
+from agents.pposgd_mpi.run_mujoco import train_pposgd_mpi
 
 from rl_teacher.comparison_collectors import SyntheticComparisonCollector, HumanComparisonCollector
 from rl_teacher.envs import get_timesteps_per_episode
@@ -260,10 +260,13 @@ def main():
             comparison_collector = SyntheticComparisonCollector()
 
         elif args.predictor == "human":
-            os.environ['RL_TEACHER_GCS_BUCKET'] = args.bucket
-            bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-            assert bucket and bucket.startswith("gs://"), "argument bucket must start with gs://"
-            comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
+            if args.bucket == "local":
+                comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name, local=True)
+            else:    
+                os.environ['RL_TEACHER_GCS_BUCKET'] = args.bucket
+                bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
+                assert bucket and bucket.startswith("gs://"), "argument bucket must start with gs://"
+                comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
         else:
             raise ValueError("Bad value for --predictor: %s" % args.predictor)
 
