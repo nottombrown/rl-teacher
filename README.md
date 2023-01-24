@@ -118,6 +118,8 @@ You should now be able to open the webapp by navigating to http://127.0.0.1:8000
 #### Create a GCS bucket to store rendered trajectory segments
 The training process generates rendered trajectory segments for you to provide feedback on. These are stored in Google Cloud Storage (GCS), so you will need to set up a GCS bucket.
 
+Note: if you would like to upload trajectory segments from your local storage, skip this part and set [-b] to "local".
+
 If you don't already have GCS set up, [create a new GCS account](https://cloud.google.com/storage/docs/) and set up a new project. Then, use the following commands to create a bucket to host your media and set this new bucket to be publicly-readable.
 
     export RL_TEACHER_GCS_BUCKET="gs://rl-teacher-<YOUR_NAME>"
@@ -131,7 +133,7 @@ Note: if you have access to a remote server, we highly recommend running the age
 
 Run the command below to start the agent training. The agent will start to take random actions in the environment, and will generate example trajectory segments for you to label:
 
-    $ python rl_teacher/teach.py -p human --pretrain_labels 175 -e Reacher-v1 -n human-175
+    $ python rl_teacher/teach.py -p human --pretrain_labels 175 -e Reacher-v1 -n human-175 -b "gs://rl-teacher-<YOUR_NAME>"
     Using TensorFlow backend.
     No label limit given. We will request one label every few seconds
     Starting random rollouts to generate pretraining segments. No learning will take place...
