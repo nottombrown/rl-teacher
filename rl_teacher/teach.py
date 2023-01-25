@@ -3,12 +3,14 @@ import os.path as osp
 import random
 from collections import deque
 from time import time, sleep
+import sys
+from pyvirtualdisplay import Display
 
 import numpy as np
 import tensorflow as tf
 from keras import backend as K
-from parallel_trpo.train import train_parallel_trpo
-from pposgd_mpi.run_mujoco import train_pposgd_mpi
+from agents.parallel_trpo.train import train_parallel_trpo
+from agents.pposgd_mpi.run_mujoco import train_pposgd_mpi
 
 from rl_teacher.comparison_collectors import SyntheticComparisonCollector, HumanComparisonCollector
 from rl_teacher.envs import get_timesteps_per_episode
@@ -53,15 +55,15 @@ class ComparisonRewardPredictor():
         self._elapsed_predictor_training_iters = 0
 
         # Build and initialize our predictor model
-        config = tf.ConfigProto(
+        config = tf.compat.v1.ConfigProto(
             device_count={'GPU': 0}
         )
-        self.sess = tf.InteractiveSession(config=config)
+        self.sess = tf.compat.v1.InteractiveSession(config=config)
         self.obs_shape = env.observation_space.shape
         self.discrete_action_space = not hasattr(env.action_space, "shape")
         self.act_shape = (env.action_space.n,) if self.discrete_action_space else env.action_space.shape
         self.graph = self._build_model()
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def _predict_rewards(self, obs_segments, act_segments, network):
         """
@@ -92,14 +94,15 @@ class ComparisonRewardPredictor():
         these labels with an authority (either a human or synthetic labeler).
         """
         # Set up observation placeholders
-        self.segment_obs_placeholder = tf.placeholder(
+        tf.compat.v1.disable_eager_execution()
+        self.segment_obs_placeholder = tf.compat.v1.placeholder(
             dtype=tf.float32, shape=(None, None) + self.obs_shape, name="obs_placeholder")
-        self.segment_alt_obs_placeholder = tf.placeholder(
+        self.segment_alt_obs_placeholder = tf.compat.v1.placeholder(
             dtype=tf.float32, shape=(None, None) + self.obs_shape, name="alt_obs_placeholder")
 
-        self.segment_act_placeholder = tf.placeholder(
+        self.segment_act_placeholder = tf.compat.v1.placeholder(
             dtype=tf.float32, shape=(None, None) + self.act_shape, name="act_placeholder")
-        self.segment_alt_act_placeholder = tf.placeholder(
+        self.segment_alt_act_placeholder = tf.compat.v1.placeholder(
             dtype=tf.float32, shape=(None, None) + self.act_shape, name="alt_act_placeholder")
 
 
@@ -115,7 +118,7 @@ class ComparisonRewardPredictor():
         segment_reward_pred_right = tf.reduce_sum(alt_q_value, axis=1)
         reward_logits = tf.stack([segment_reward_pred_left, segment_reward_pred_right], axis=1)  # (batch_size, 2)
 
-        self.labels = tf.placeholder(dtype=tf.int32, shape=(None,), name="comparison_labels")
+        self.labels = tf.compat.v1.placeholder(dtype=tf.int32, shape=(None,), name="comparison_labels")
 
         # delta = 1e-5
         # clipped_comparison_labels = tf.clip_by_value(self.comparison_labels, delta, 1.0-delta)
@@ -125,9 +128,9 @@ class ComparisonRewardPredictor():
         self.loss_op = tf.reduce_mean(data_loss)
 
         global_step = tf.Variable(0, name='global_step', trainable=False)
-        self.train_op = tf.train.AdamOptimizer().minimize(self.loss_op, global_step=global_step)
+        self.train_op = tf.compat.v1.train.AdamOptimizer().minimize(self.loss_op, global_step=global_step)
 
-        return tf.get_default_graph()
+        return tf.compat.v1.get_default_graph()
 
     def predict_reward(self, path):
         """Predict the reward for each step in a given path"""
@@ -213,6 +216,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--env_id', required=True)
     parser.add_argument('-p', '--predictor', required=True)
+    parser.add_argument('-b', '--bucket', required=('--predictor' in sys.argv or '-p' in sys.argv))
     parser.add_argument('-n', '--name', required=True)
     parser.add_argument('-s', '--seed', default=1, type=int)
     parser.add_argument('-w', '--workers', default=4, type=int)
@@ -256,9 +260,13 @@ def main():
             comparison_collector = SyntheticComparisonCollector()
 
         elif args.predictor == "human":
-            bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
-            assert bucket and bucket.startswith("gs://"), "env variable RL_TEACHER_GCS_BUCKET must start with gs://"
-            comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
+            if args.bucket == "local":
+                comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name, local=True)
+            else:    
+                os.environ['RL_TEACHER_GCS_BUCKET'] = args.bucket
+                bucket = os.environ.get('RL_TEACHER_GCS_BUCKET')
+                assert bucket and bucket.startswith("gs://"), "argument bucket must start with gs://"
+                comparison_collector = HumanComparisonCollector(env_id, experiment_name=experiment_name)
         else:
             raise ValueError("Bad value for --predictor: %s" % args.predictor)
 
@@ -322,4 +330,5 @@ def main():
         raise ValueError("%s is not a valid choice for args.agent" % args.agent)
 
 if __name__ == '__main__':
-    main()
+    with Display(visible=False, size=(500, 500)) as disp:
+        main()

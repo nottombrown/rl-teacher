@@ -32,7 +32,23 @@ Together with a set of integrations to [OpenAI gym](https://github.com/openai/gy
 </p>
 
 
-## Installation
+## Quick install
+
+### Dependencies
+
+> # pip dependencies
+> Django ~= 3.2.16  
+> dj_database_url ~= 1.0.0  
+> whitenoise ~= 6.2.0  
+> mujoco-py ~= 2.1.2.14  
+> gym ~= 0.26.0  
+> tensorflow >= 2.11.0
+  
+> # conda dependencies
+> mesalib ~= 21.2.5
+> glew ~= 2.1.0
+
+### Installation
 
 Obtain a license for [MuJoCo](https://www.roboti.us/license.html) and install the [binaries](https://www.roboti.us/index.html) on your system. For good documentation on MuJoCo installation, and an easy way to test that MuJoCo is working on your system, we recommend following the mujoco-py installation.
 
@@ -102,6 +118,8 @@ You should now be able to open the webapp by navigating to http://127.0.0.1:8000
 #### Create a GCS bucket to store rendered trajectory segments
 The training process generates rendered trajectory segments for you to provide feedback on. These are stored in Google Cloud Storage (GCS), so you will need to set up a GCS bucket.
 
+Note: if you would like to upload trajectory segments from your local storage, skip this part and set [-b] to "local".
+
 If you don't already have GCS set up, [create a new GCS account](https://cloud.google.com/storage/docs/) and set up a new project. Then, use the following commands to create a bucket to host your media and set this new bucket to be publicly-readable.
 
     export RL_TEACHER_GCS_BUCKET="gs://rl-teacher-<YOUR_NAME>"
@@ -115,7 +133,7 @@ Note: if you have access to a remote server, we highly recommend running the age
 
 Run the command below to start the agent training. The agent will start to take random actions in the environment, and will generate example trajectory segments for you to label:
 
-    $ python rl_teacher/teach.py -p human --pretrain_labels 175 -e Reacher-v1 -n human-175
+    $ python rl_teacher/teach.py -p human --pretrain_labels 175 -e Reacher-v1 -n human-175 -b "gs://rl-teacher-<YOUR_NAME>"
     Using TensorFlow backend.
     No label limit given. We will request one label every few seconds
     Starting random rollouts to generate pretraining segments. No learning will take place...
@@ -233,4 +251,7 @@ A huge thanks to Paul Christiano and Dario Amodei for the design of this system 
 
 Max Harms ([@raelifin](https://github.com/Raelifin)) wrote substantial portions of the system. Max integrated and tuned the parellized TRPO implementation, added many additional features and improvements, and trained the picturesque Walker Ballerina featured prominently in this repo.
 
-Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).
+Also a big thanks to Catherine Olsson ([@catherio](https://github.com/catherio)) for immensely improving the documentation and usability of `rl-teacher`. And thanks to Kevin Frans ([@kvfrans](https://github.com/kvfrans)) for his fast open-source [parallel-trpo implementation](https://github.com/kvfrans/parallel-trpo).  
+
+
+Thank you for all members of the Deepest season 12 who support this project.
